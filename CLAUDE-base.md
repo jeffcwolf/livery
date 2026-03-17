@@ -200,6 +200,118 @@ Resolve the design question before choosing a name.
 
 ---
 
+## Session Process Log
+
+Every session produces a process log: a sequential, append-only record of
+what was done, in the order it was done. The log is the audit trail for the
+session. It makes TDD rhythm visible, records in-session decisions that
+would otherwise be lost, and allows a reviewer to reconstruct exactly what
+happened without reading the full session transcript.
+
+### Location
+
+```
+process/SESSION-NNN.md
+```
+
+at the repository root. `NNN` is the zero-padded session number matching
+the session prompt (e.g. `SESSION-006.md`). Create the file at the start
+of the session, before any other action.
+
+### Format
+
+Each entry is a single line:
+
+```
+[ACTION] [subject] — [detail]
+```
+
+**Action types:**
+
+| Tag | When to write it |
+|---|---|
+| `READ` | Before reading any file (skill, spec, oracle, prior session) |
+| `DECISION` | When making any design choice not fully specified in the prompt |
+| `RED` | After writing a failing test — before writing any implementation |
+| `GREEN` | After the test passes — before the refactor pass |
+| `REFACTOR` | After each refactor pass — name the specific change made |
+| `GATE` | After running each session gate (fmt, clippy, tests, prism) |
+| `DEFER` | When explicitly deciding not to implement something this session |
+| `ADR` | When recording an architectural deviation from the spec |
+
+### Timing rule
+
+**Write the entry before taking the action, not after.**
+
+For `READ`: write the entry, then open the file.
+For `RED`: write the entry including the expected failure reason, then run
+the test to confirm it fails.
+For `GREEN`: write the entry, then confirm by running the test suite.
+
+This is the discipline that makes the log a genuine audit trail rather than
+a reconstruction. A log written after the fact is indistinguishable from
+fabrication.
+
+### Example
+
+```
+READ  livery/CLAUDE-base.md
+READ  livery/conversion.md
+READ  mint/ARCHITECTURE.md §mint-archive
+READ  mint/SESSIONS.md (last 2 entries)
+READ  mint/skills/write-proptest.md
+READ  /tmp/release-scholar/src/archive/tarball.rs (oracle)
+DECISION  ArchiveError variants: ProjectDirNotFound, GitNotInstalled,
+          NotAGitRepository, GitCommandFailed, OutputDirCreationFailed,
+          IoError — chosen for caller informativeness
+ADR  Subprocess (git ls-files) instead of git2 crate — git2 not in
+     workspace Cargo.toml; adds C dependency; equivalent output
+RED   list_tracked_files_returns_error_when_project_dir_missing
+      — expected: ArchiveError::ProjectDirNotFound
+GREEN list_tracked_files_returns_error_when_project_dir_missing
+REFACTOR  renamed `dir` → `project_dir` in test setup (ARC: specific noun)
+RED   list_tracked_files_returns_error_when_not_a_git_repo
+      — expected: ArchiveError::NotAGitRepository
+GREEN list_tracked_files_returns_error_when_not_a_git_repo
+RED   list_tracked_files_returns_sorted_paths
+      — expected: vec in ascending order
+GREEN list_tracked_files_returns_sorted_paths
+REFACTOR  extracted sort to end of list_tracked_files; removed sort from
+          callers (deep module: callers receive sorted paths as contract)
+RED   archive_determinism_same_inputs_same_sha256 (proptest)
+      — expected: sha256 equality across two build_archive calls
+GREEN archive_determinism_same_inputs_same_sha256
+GATE  cargo fmt --check — PASS
+GATE  cargo clippy --workspace -- -D warnings — PASS
+GATE  cargo test --workspace — PASS (149 tests)
+GATE  prism check . --strict — PASS (integration-test gate still failing,
+      known deferred)
+DEFER integration tests against real git fixture repo — Session 7
+```
+
+### What the log is not
+
+The process log is not the SESSIONS.md entry. SESSIONS.md is the permanent
+record written after all gates pass. The process log is the working record
+written during the session. Both are required; they serve different purposes.
+
+The process log does not need to be prose. Single-line entries only. It is
+designed to be scanned, not read.
+
+### Hard constraints
+
+- Create the file before any other action in the session.
+- Never batch-write entries. Each entry is written before its action.
+- `RED` entries must appear before `GREEN` entries for every test. A
+  `GREEN` entry with no preceding `RED` entry for the same test name is
+  a process violation.
+- The log is committed as part of the session's final commit alongside
+  the SESSIONS.md entry. It is a permanent repository artifact.
+- Do not delete or rewrite entries. If a decision is reversed, add a new
+  `DECISION` entry explaining the reversal — do not edit the earlier one.
+
+---
+
 ## Session Contract
 
 The project `CLAUDE.md` specifies the exact commands for this project's session
@@ -213,6 +325,7 @@ contract. These are the universal gates that apply to every project:
 - [ ] `livery/skills/review-docs.md` completed if public items were added or modified
 - [ ] `livery/skills/naming-review.md` completed if new names were introduced
 - [ ] `<project>/SESSIONS.md` entry written with scope, decisions, Prism delta, audit results
+- [ ] process/SESSION-NNN.md committed alongside SESSIONS.md entry
 
 ---
 
