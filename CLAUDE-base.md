@@ -34,9 +34,13 @@ load the file. The project `CLAUDE.md` specifies the exact paths for this projec
 | `livery/standards/ousterhout.md` | Designing or reviewing any module; running the design audit |
 | `livery/standards/readable-code.md` | Writing or reviewing names, comments, or control flow |
 | `livery/standards/rust-specifics.md` | Writing any Rust type, trait, error type, or test |
-| Project `DESIGN.md` | Scope questions; checking whether a feature is in scope |
+| Project `SPEC.md` | Scope questions; checking whether a feature is in scope |
 | Project `ARCHITECTURE.md` | Designing or modifying any module, crate, or public API |
 | Project `SESSIONS.md` | Starting a session (read last 2–3 entries); ending a session |
+| `livery/standards/user.md` | User-specific conventions apply to this session |
+| `livery/feedback/feedback-loop.md` | Milestone retrospective; writing proposals |
+| `livery/feedback/enforcement.md` | Checking whether a rule needs escalation |
+| Project `standards/project.md` | Project-specific conventions apply to this session |
 
 ---
 
@@ -63,6 +67,38 @@ design debt in `<project>/SESSIONS.md` and find a clean approach for the current
 
 ---
 
+## Runtime Interface
+
+Livery is a design constitution. It defines *what quality the output must meet* but
+does not prescribe *how the session is executed*. Execution may be delegated to a
+runtime — an external tool, plugin, or workflow system that provides structured
+brainstorming, task-level planning, TDD-enforced execution with subagent dispatch,
+between-task code review, and git workflow management.
+
+If a runtime is present (declared in the project's CLAUDE.md), Livery defers to it
+for execution and focuses on quality gates, design philosophy, process auditing, and
+session continuity. If no runtime is present, the agent executes sessions directly
+using the workflow described in WORKFLOW.md.
+
+An adapter document (e.g., `livery/adapter-superpowers.md`) maps a specific runtime
+to this interface. The adapter is the only Livery document that references the runtime
+by name.
+
+**What the runtime does not replace.** Even with a runtime present, the following
+remain Livery's responsibility and are never delegated: the design philosophy
+(Ousterhout's principles), the three-pass refactoring protocol, property-based tests
+and reference models, quality gates (Prism with numeric thresholds), process auditing
+(Red Flag, Naming, Documentation reviews), session continuity (SESSIONS.md entries),
+documentation standards, naming standards, and language-specific code standards.
+
+**Completion definition.** When a runtime is present, session completion requires both
+systems to agree. The runtime considers execution complete (all tasks done, tests
+passing, code review clean) — this is necessary but not sufficient. Livery's quality
+gate passes, all review skills have run, and the SESSIONS.md entry is written — this
+is the actual completion criterion.
+
+---
+
 ## Development Workflow: TDD — Red / Green / Refactor
 
 The sequence is non-negotiable in every session, for every piece of behaviour.
@@ -79,7 +115,10 @@ Green phase control flow is often inside-out — that is acceptable. Both are fi
 Refactor.
 
 **Refactor:** With tests green, work through these three passes in order. All tests
-must stay green throughout.
+must stay green throughout. All three passes are mandatory in every refactor phase. If
+a runtime dispatches tasks to subagents, those subagents must complete all three passes
+before committing. This overrides any runtime guidance that defines refactoring more
+loosely.
 
 *Pass 1 — Ousterhout (structure):* Load `livery/standards/ousterhout.md`. Can any
 module be deepened? Can any abstraction be removed? Does any function do more than
@@ -183,7 +222,7 @@ Refuse to produce these. If you find yourself about to produce one, stop and red
 | **Comment restates code** | A comment describing what the code does in the same terms. Delete it. Comments explain *why*. |
 | **Pass-through method** | A method whose body is a single call to another method with the same signature. Delete it. |
 | **Tactical hack** | Any shortcut justified by "we'll fix it later." Record it as design debt in `<project>/SESSIONS.md` and find a clean approach. |
-| **Scope creep** | Implementing anything not in `<project>/DESIGN.md`. Record ideas in `<project>/SESSIONS.md` under deferred items. Do not implement them. |
+| **Scope creep** | Implementing anything not in `<project>/SPEC.md`. Record ideas in `<project>/SESSIONS.md` under deferred items. Do not implement them. |
 
 ---
 
@@ -312,6 +351,40 @@ designed to be scanned, not read.
 
 ---
 
+## Automated Quality Gate Protocol
+
+At session start, capture the Prism baseline:
+
+```bash
+livery/bin/prism stats . --json > /tmp/prism-session-before.json
+```
+
+At session end, after all implementation is complete, run in this order:
+
+```bash
+cargo test --workspace
+cargo fmt --check
+cargo clippy --workspace -- -D warnings
+livery/bin/prism check . --strict
+livery/bin/prism stats . --json > /tmp/prism-session-after.json
+```
+
+Compute the delta between before and after JSON. Write the delta directly into the
+SESSIONS.md entry: `rust_lines`, `tests` (unit/integration/doctest breakdown),
+`test_ratio`, `doc_coverage`, `pub_ratio`, `max_cyclomatic`, `max_cognitive`,
+`fns_over_50_lines`.
+
+If `prism check . --strict` exits non-zero, the session is not done. Fix the
+violations before proceeding. This is non-negotiable.
+
+If `livery/bin/prism` is not executable (missing binary, wrong architecture,
+permissions), report the failure to the human with the exact error, list the commands
+that need to be run manually, and leave `[PRISM: manual]` placeholders in the
+SESSIONS.md entry. Do not skip the gate — the session is not complete until Prism
+data is recorded.
+
+---
+
 ## Session Contract
 
 The project `CLAUDE.md` specifies the exact commands for this project's session
@@ -320,18 +393,20 @@ contract. These are the universal gates that apply to every project:
 - [ ] All tests pass (`cargo test --workspace` or project equivalent)
 - [ ] No formatting violations (`cargo fmt --check`)
 - [ ] No lint warnings (`cargo clippy -- -D warnings` or equivalent)
-- [ ] Quality gate passes (Prism or project equivalent tool)
+- [ ] Quality gate passes (`livery/bin/prism check . --strict` or project equivalent)
+- [ ] Prism baseline delta computed and recorded
 - [ ] `livery/skills/review-for-red-flags.md` completed on all modules touched
 - [ ] `livery/skills/review-docs.md` completed if public items were added or modified
 - [ ] `livery/skills/naming-review.md` completed if new names were introduced
 - [ ] `<project>/SESSIONS.md` entry written with scope, decisions, Prism delta, audit results
-- [ ] process/SESSION-NNN.md committed alongside SESSIONS.md entry
+- [ ] `process/SESSION-NNN.md` committed alongside SESSIONS.md entry
+- [ ] Session-end pattern check completed (see `livery/feedback/feedback-loop.md` §3.1)
 
 ---
 
 ## What to Do When Uncertain
 
-1. **Scope question** ("should I implement X?") → Read `<project>/DESIGN.md`.
+1. **Scope question** ("should I implement X?") → Read `<project>/SPEC.md`.
    If X is not there, the answer is no. Record the idea as a deferred item.
 
 2. **Structure question** ("where does this code belong?") → Read the project

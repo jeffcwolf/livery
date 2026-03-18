@@ -21,7 +21,7 @@ local coherence and loses track of the whole. Livery is the whole.
 
 The methodology is built around four principles:
 
-- **Design before code.** A `DESIGN.md` and `ARCHITECTURE.md` exist before any
+- **Design before code.** A `SPEC.md` and `ARCHITECTURE.md` exist before any
   implementation begins. The agent reads them at the start of every session.
 - **TDD, strictly.** Red before green, always. Refactor after green, always.
   Property-based tests are mandatory for any function that transforms data.
@@ -35,26 +35,49 @@ The methodology is built around four principles:
 
 ## What's in this repo
 
-```
-CLAUDE-base.md        The base agent constitution. Every project that uses
-                      Livery extends this file with a project-specific CLAUDE.md.
+CLAUDE-base.md        The base agent constitution.
 
-conversion.md         Workflow deviations for "conversion" projects — ground-up
-                      rebuilds of existing tools where the original is used as
-                      a correctness oracle.
-
-WORKFLOW.md           The standard phase sequence: Design → Architecture →
+WORKFLOW.md           The standard phase sequence: Spec → Architecture →
                       Setup → Session Execution → Release.
 
-standards/            Coding standards referenced by CLAUDE-base.md.
-  rust-specifics.md   Rust-specific rules: error handling, type system usage,
-                      naming, module organisation.
+conversion.md         Workflow deviations for conversion projects.
 
-skills/               Reusable skill files invoked by the agent for specific tasks.
-  review-for-red-flags.md   Post-implementation audit for design anti-patterns.
-  review-docs.md            Documentation quality review for public API items.
-  naming-review.md          Naming audit against the project's naming conventions.
-```
+adapter-superpowers.md  Runtime adapter: maps Superpowers to Livery's
+                        runtime interface.
+
+context-management.md   Optional context window protocol. Activated when
+                        context exhaustion patterns appear.
+
+standards/            Coding standards referenced by CLAUDE-base.md.
+  ousterhout.md       Ousterhout's principles as executable rules.
+  readable-code.md    ARC naming, commenting, and control flow rules.
+  rust-specifics.md   Rust-specific applications of both.
+  user.md             User-specific conventions (optional).
+  project.md.template Template for project-specific conventions.
+
+skills/               Reusable skill files invoked by the agent.
+  session-open.md     Open a session: verify baseline, load context.
+  review-for-red-flags.md   Design audit against Ousterhout's Red Flags.
+  review-docs.md      Documentation quality review.
+  naming-review.md    Naming audit against ARC criteria.
+  run-validation.md   Complete validation pipeline.
+  update-architecture.md  Keep ARCHITECTURE.md honest after changes.
+  add-crate.md        Add a new workspace crate.
+  bug-fix.md          Reproduce → red test → fix → green.
+
+feedback/             Self-correction system.
+  feedback-loop.md    Pattern detection and proposal protocol.
+  enforcement.md      Rule escalation register.
+  known-patterns.md   Recurring patterns observed across sessions.
+  proposals/          Proposed changes awaiting human review.
+
+docs/                 Rationale documents (human-facing).
+  INDEX.md            System map and navigation guide.
+  (6 rationale files)
+
+bin/                  Pre-compiled tooling.
+  prism               Automated quality gate binary.
+  README.md           Build and rebuild instructions.
 
 ---
 

@@ -37,7 +37,21 @@ session's first task is to fix the pre-existing failure, recorded as such in
 If `cargo check` fails with compile errors, read the errors before anything else.
 They may indicate that the last session ended in an incomplete state.
 
-### Step 2 — Read the session context
+### Step 2 — Capture the Prism baseline
+
+After the baseline is confirmed clean, capture the Prism metrics snapshot:
+
+```bash
+livery/bin/prism stats . --json > /tmp/prism-session-before.json
+```
+
+This is a silent step — record the numbers for the delta at session end but do not
+report them to the human unless asked. If `livery/bin/prism` is not executable, note
+`[PRISM: manual — baseline not captured]` and continue. The session-end validation
+(see `livery/skills/run-validation.md`) will need the human to provide Prism data
+manually.
+
+### Step 3 — Read the session context
 
 In order:
 
@@ -54,7 +68,7 @@ In order:
 3. **Read the relevant section of `<project>/ARCHITECTURE.md`** for the crate(s) being worked on.
    Confirm your understanding of the public API contract and the dependency boundaries.
 
-### Step 3 — Confirm scope boundaries explicitly
+### Step 4 — Confirm scope boundaries explicitly
 
 State the scope of this session in one sentence. Then state what is explicitly out of
 scope. If you cannot do this, the session prompt is ambiguous — seek clarification.
@@ -66,14 +80,14 @@ Example:
 > **Out of scope:** The CodeMeta and BibTeX transformation functions (next session).
 > Any changes to `mint-config` or `mint-cli`.
 
-### Step 4 — Load the relevant reference documents
+### Step 5 — Load the relevant reference documents
 
 Based on the session scope, identify which files to have ready:
 
 - Working on a library crate? Load `<project>/ARCHITECTURE.md` §Public API Stubs for that crate.
-- Designing a new type or module? Load `livery/livery/standards/ousterhout.md`.
-- Writing any Rust code? Load `livery/livery/standards/rust-specifics.md`.
-- Writing names or comments? Load `livery/livery/standards/readable-code.md`.
+- Designing a new type or module? Load `livery/standards/ousterhout.md`.
+- Writing any Rust code? Load `livery/standards/rust-specifics.md`.
+- Writing names or comments? Load `livery/standards/readable-code.md`.
 - Following a procedural task? Load the relevant skill file.
 
 Do not load everything — load what is relevant to this session's scope. Prompt dilution
@@ -84,12 +98,23 @@ them.
 At any point during a session, if you find yourself unable to name a function, module,
 or type clearly without using "and" or a long qualifying clause, treat this as a design
 signal, not a naming problem. Stop. Ask: does this thing have more than one
-responsibility? Consult `livery/livery/standards/ousterhout.md` — the "hard to describe" Red Flag
+responsibility? Consult `livery/standards/ousterhout.md` — the "hard to describe" Red Flag
 and the single-responsibility principle. ARC and Ousterhout converge here: if you
 cannot name it, it probably needs to be split. Resolve the design question before
 choosing a name.
 
-### Step 5 — Record the session opening in `<project>/SESSIONS.md`
+### Step 6 — Create the process log
+
+Create the session process log file before any other action:
+
+```
+process/SESSION-NNN.md
+```
+
+See CLAUDE-base.md §Session Process Log for the format. The first entries will be
+`READ` entries for each file loaded in Steps 3 and 5.
+
+### Step 7 — Record the session opening in `<project>/SESSIONS.md`
 
 Add the session header before writing any code:
 
@@ -102,7 +127,7 @@ Add the session header before writing any code:
 
 **Entry state:**
 - Baseline: [cargo test --workspace result: X tests passing]
-- Prism: [paste key metrics from `prism stats . --json` or note "same as Session N-1"]
+- Prism: [key metrics from /tmp/prism-session-before.json, or "same as Session N-1"]
 - Open items from last session: [none / list]
 
 **Reference documents loaded:** [list]
@@ -121,7 +146,7 @@ When opening a session with an agent, use this template in the prompt. Do not de
 
 **Scope:** [One sentence. What is being built or fixed.]
 
-**Reference:** DESIGN.md §[relevant section] / ARCHITECTURE.md §[relevant crate]
+**Reference:** SPEC.md §[relevant section] / ARCHITECTURE.md §[relevant crate]
 
 **Task:**
 [Specific implementation task. Reference the public API stub from ARCHITECTURE.md.

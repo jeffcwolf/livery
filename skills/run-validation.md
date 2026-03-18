@@ -48,38 +48,53 @@ cargo test --workspace -- --nocapture
 ### Step 4 — Prism quality gate
 
 ```bash
-prism check . --strict --fix-suggestions
+livery/bin/prism check . --strict --fix-suggestions
 ```
 
 If this fails: read the fix suggestions. Address each failure. Do not disable thresholds
 in `<project>/prism.toml` to make this pass — raise the quality of the code instead.
 
+If `livery/bin/prism` is not executable (missing binary, wrong architecture, permissions),
+report the failure to the human with the exact error and list the command for manual
+execution. Leave `[PRISM: manual]` in the SESSIONS.md entry. Do not skip the gate.
+
 ### Step 5 — Prism baseline delta
 
 ```bash
-prism stats . --json > /tmp/prism-current.json
+livery/bin/prism stats . --json > /tmp/prism-session-after.json
 ```
 
-Compare against the previous session's baseline (stored in `<project>/SESSIONS.md` or in
-`.prism-baseline.json` at the project root). Any metric that worsened requires a note
-in the `<project>/SESSIONS.md` entry explaining why — or it must be fixed.
+Compare against the session-start baseline (captured at the beginning of the session
+per CLAUDE-base.md §Automated Quality Gate Protocol, stored at
+`/tmp/prism-session-before.json`). Any metric that worsened requires a note in the
+`<project>/SESSIONS.md` entry explaining why — or it must be fixed.
 
 Key metrics to track:
 - Test count and coverage (should increase or hold)
 - Module depth ratios (should not decrease)
 - Function complexity (should not increase)
+- Doc coverage (should not decrease)
+- Functions over 50 lines (should not increase)
 
 ### Step 6 — Architecture consistency check
 
 If any public API, crate structure, or inter-crate dependency changed this session:
 
 ```bash
-prism map . --mermaid
+livery/bin/prism map . --mermaid
 ```
 
 Compare the output against the Dependency Graph section of `<project>/ARCHITECTURE.md`. If they
 diverge, update `<project>/ARCHITECTURE.md` to reflect the current state and record the change
 as a session decision.
+
+### Step 7 — Session-end pattern check
+
+Scan the last 3–5 SESSIONS.md entries (including the one about to be written). Look
+for recurring patterns: same metric drifting the same direction, same red flag finding,
+same kind of naming issue, same deferred item accumulating. If a recurrence is found,
+append or update an entry in `livery/feedback/known-patterns.md`. See
+`livery/feedback/feedback-loop.md` §3.1 for the full protocol.
 
 ---
 
@@ -89,8 +104,8 @@ as a session decision.
 cargo fmt --check
 cargo clippy --workspace -- -D warnings
 cargo test --workspace
-prism check . --strict --fix-suggestions
-prism stats . --json > /tmp/prism-current.json
+livery/bin/prism check . --strict --fix-suggestions
+livery/bin/prism stats . --json > /tmp/prism-session-after.json
 ```
 
 All five must exit 0 before the session is complete.

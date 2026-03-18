@@ -110,7 +110,7 @@ Prism's five subcommands each address a distinct validation concern:
 
 The **dogfood gate** — `mint check .` run on the `mint` repository itself — is the
 ultimate integration test. The tool must be able to process its own codebase. This
-requirement is in the v1.0 checklist in `<project>/DESIGN.md` and is verified by
+requirement is in the v1.0 checklist in `<project>/SPEC.md` and is verified by
 `mint/skills/prepare-release.md`.
 
 ---
@@ -127,7 +127,7 @@ requirement is in the v1.0 checklist in `<project>/DESIGN.md` and is verified by
 | CI mirrors local validation | `AGENTIC_WORKFLOW.md` Phase 5 | GitHub Actions: check → test → prism jobs |
 | Prism design-quality gate in CI | `AGENTIC_WORKFLOW.md` Phase 5 Job 3 | `prism check . --json --strict` as a CI job |
 | `prism.toml` thresholds | Project root | Configured in Phase 2; not lowered to pass |
-| Dogfood gate | `<project>/DESIGN.md` v1.0 checklist; `mint/skills/prepare-release.md` Step 5 | `mint check .` on the mint repo |
+| Dogfood gate | `<project>/SPEC.md` v1.0 checklist; `mint/skills/prepare-release.md` Step 5 | `mint check .` on the mint repo |
 
 ---
 

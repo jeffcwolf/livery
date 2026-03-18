@@ -2,7 +2,7 @@
 
 > **When to invoke:** Whenever fixing a defect — a behaviour that is wrong, a crash,
 > a check that produces incorrect results, or an output that does not match the
-> contract in `<project>/DESIGN.md` or `<project>/ARCHITECTURE.md`.
+> contract in `<project>/SPEC.md` or `<project>/ARCHITECTURE.md`.
 
 ---
 

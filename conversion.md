@@ -14,7 +14,7 @@
 
 ## The Core Difference
 
-In a greenfield project, `DESIGN.md` is written from a problem statement and user need.
+In a greenfield project, `SPEC.md` is written from a problem statement and user need.
 Correctness is defined by the design. There is no prior implementation to compare against.
 
 In a conversion, **the existing codebase is the specification**. It defines what "correct"
@@ -41,10 +41,10 @@ A survey document with four sections:
 
 **1. What it does** — A functional description of the existing codebase. What commands
 or entry points exist, what they accept, what they produce. Be precise enough that
-`DESIGN.md` can be written by studying this document, not by re-reading the source code.
+`SPEC.md` can be written by studying this document, not by re-reading the source code.
 
 **2. What works well** — Features that are correct, well-designed, or worth preserving
-in the rebuild. These become firm scope items in `DESIGN.md`.
+in the rebuild. These become firm scope items in `SPEC.md`.
 
 **3. What is problematic** — Known bugs, design problems, missing features, or
 architectural issues. These are the motivation for the rebuild — the reasons "fix the
@@ -58,7 +58,7 @@ gates the original does not.
 
 ### Why this phase matters
 
-Without a survey, `DESIGN.md` will be written from memory or impression — and memory
+Without a survey, `SPEC.md` will be written from memory or impression — and memory
 is unreliable about what a codebase actually does vs. what you think it does. The survey
 forces a systematic reading of the existing implementation before any design decisions
 are made.
@@ -74,7 +74,7 @@ decision might have been made by gut feel. With it, it was made from evidence.
 
 The standard Phase 0 applies with two additions:
 
-**`DESIGN.md` is written by studying `SURVEY.md`**, not from scratch. The problem
+**`SPEC.md` is written by studying `SURVEY.md`**, not from scratch. The problem
 statement describes the gap between what the existing tool does and what a better-designed
 tool should do. The feature scope is grounded in what the existing tool does, with
 deliberate additions and deliberate removals.
@@ -190,7 +190,7 @@ phase:
 A conversion is complete — and the project can switch to standard greenfield/maintenance
 mode — when:
 
-- [ ] All features in `<project>/DESIGN.md` v1 scope are implemented
+- [ ] All features in `<project>/SPEC.md` v1 scope are implemented
 - [ ] The rebuilt tool produces correct results on the reference test suite
 - [ ] `prism check . --strict` passes (not just diagnostic)
 - [ ] `<project>/ARCHITECTURE-target.md` accurately describes the actual code
