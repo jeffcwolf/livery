@@ -1,0 +1,96 @@
+{
+  "name": "release-scholar",
+  "is_workspace": false,
+  "timestamp": "2026-03-16T20:20:35Z",
+  "code": {
+    "name": "release-scholar",
+    "is_workspace": false,
+    "rust_lines": 2083,
+    "files": 22,
+    "crates": 1
+  },
+  "deps": {
+    "direct": 14,
+    "transitive": 256,
+    "advisories": 0
+  },
+  "tests": {
+    "unit": 0,
+    "integration": 0,
+    "doctests": 0,
+    "ratio_per_100_loc": 0.0
+  },
+  "docs": {
+    "documented_pub_items": 0,
+    "total_pub_items": 44,
+    "coverage_pct": 0.0,
+    "doctests": 0
+  },
+  "safety": {
+    "unsafe_blocks": 0,
+    "locations": []
+  },
+  "surface": {
+    "pub_items": 30,
+    "total_items": 68,
+    "pub_ratio": 0.4411764705882353
+  },
+  "complexity": {
+    "max_fn_lines": 162,
+    "max_fn_name": "apache2_license_text",
+    "max_fn_location": "src/commands/init.rs:apache2_license_text",
+    "fns_over_50_lines": 9,
+    "top_functions": [
+      {
+        "name": "apache2_license_text",
+        "location": "src/commands/init.rs:apache2_license_text",
+        "lines": 162
+      },
+      {
+        "name": "run",
+        "location": "src/commands/publish.rs:run",
+        "lines": 118
+      },
+      {
+        "name": "run",
+        "location": "src/commands/init.rs:run",
+        "lines": 108
+      },
+      {
+        "name": "validate",
+        "location": "src/validation/citation.rs:validate",
+        "lines": 88
+      },
+      {
+        "name": "run",
+        "location": "src/commands/mirror.rs:run",
+        "lines": 85
+      },
+      {
+        "name": "validate",
+        "location": "src/validation/size.rs:validate",
+        "lines": 83
+      },
+      {
+        "name": "validate",
+        "location": "src/validation/git.rs:validate",
+        "lines": 78
+      },
+      {
+        "name": "scan_git_history",
+        "location": "src/validation/security.rs:scan_git_history",
+        "lines": 70
+      },
+      {
+        "name": "run",
+        "location": "src/commands/build.rs:run",
+        "lines": 57
+      },
+      {
+        "name": "create_archive",
+        "location": "src/archive/tarball.rs:create_archive",
+        "lines": 47
+      }
+    ]
+  }
+}
