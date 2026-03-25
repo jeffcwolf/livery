@@ -473,6 +473,8 @@ unstructured prompts produce unstructured work.
 [paste prism diff summary table, or "No regressions. All 13 metrics stable or improved."]
 Notes: [any accepted regression and why]
 
+**Mutation check:** [not run / run on `<files>` — N mutants tested, M survived (details below)]
+
 **Open issues / deferred items:**
 - [Anything that came up but was intentionally deferred]
 ```

@@ -174,6 +174,18 @@ what it should do. That is the shared-assumption trap.
 - A test is only good if mutating the implementation causes it to fail. If you can
   change the implementation without breaking the test, the test is weak. Rewrite it.
 
+### When to run mutation testing
+The human runs `cargo mutants --file <file> -- --workspace` locally when any of
+these apply:
+
+(a) A session touched complex logic and you want to verify the tests are strong.
+(b) 5+ sessions have passed since the last mutation run.
+(c) prism diff shows test_ratio declining.
+(d) It just feels like the tests might be skating by.
+
+This is a human judgment call, not an automated gate. Record results in the
+SESSIONS.md entry.
+
 ---
 
 ## Rust Standards
@@ -397,6 +409,7 @@ contract. These are the universal gates that apply to every project:
 - [ ] No lint warnings (`cargo clippy -- -D warnings` or equivalent)
 - [ ] Quality gate passes (`livery/bin/prism check . --strict` or project equivalent)
 - [ ] Prism baseline delta computed and recorded
+- [ ] Mutation check recorded: `**Mutation check:** [not run / run on <files> — N mutants tested, M survived (details below)]`
 - [ ] `livery/skills/review-for-red-flags.md` completed on all modules touched
 - [ ] `livery/skills/review-docs.md` completed if public items were added or modified
 - [ ] `livery/skills/naming-review.md` completed if new names were introduced
