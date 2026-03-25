@@ -247,6 +247,17 @@ YOUR_PROJECT/
 
 ---
 
+## Updating Livery
+
+Livery is pinned to a specific commit. To pull the latest version,
+run this from your project root (not from inside `livery/`):
+```bash
+git submodule update --remote livery && git add livery && git commit -m "Update livery to latest"
+```
+
+---
+
+
 ## Troubleshooting
 
 **Livery directory is empty in Claude Code.** Claude Code clones repos
