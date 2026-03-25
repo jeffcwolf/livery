@@ -86,6 +86,7 @@ agent document that points to the right layer for every situation.
 | `livery/skills/update-architecture.md` | Keep ARCHITECTURE.md honest after structural changes | Any session that changes structure |
 | `livery/skills/add-crate.md` | Add a new workspace crate correctly | When a new crate is needed |
 | `livery/skills/bug-fix.md` | Reproduce → red test → fix → green | When fixing a defect |
+| `livery/skills/write-spec.md` | Structure a SPEC.md through forced-constraint conversation | Phase 0 specification |
 
 Project-specific skills live in `<project>/skills/` and reference project types and crates:
 
