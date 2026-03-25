@@ -399,6 +399,69 @@ data is recorded.
 
 ---
 
+## Commit Messages
+
+Format:
+
+<type>: <what changed>
+
+SESSION: <N>
+WHY: <why this change was made — the motivation, not the mechanics>
+WHAT:
+- <specific change 1>
+- <specific change 2>
+TRAPS: <anything surprising, gotchas, or things that broke and were fixed>
+DEPENDS: <what this change assumes or relies on>
+
+Types: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `style:`, `chore:`
+
+Rules:
+
+- Commit after each discrete, compiling change. Do not batch an entire
+  session into a single commit.
+- Never commit code that does not compile or has failing tests.
+- The SESSION field links the commit to its SESSIONS.md entry. Use the
+  session number from the session prompt.
+- The TRAPS field is the most important field for future sessions. If you
+  hit a problem and solved it, say so. If a naive approach breaks something,
+  say so. If a dependency behaves unexpectedly, say so. This is what prevents
+  the next agent session from repeating the same mistake. Think twice before
+  omitting TRAPS — most non-trivial changes have at least one.
+- The DEPENDS field prevents future sessions from accidentally removing
+  something a later commit relies on. Name the assumption: "DEPENDS:
+  orb-scan::Snapshot must be Serialize + Deserialize" or "DEPENDS:
+  livery/bin/prism must be on PATH."
+- WHAT should name the files changed and decisions made. Keep it to 2–5
+  lines. Reference specific types and functions, not vague descriptions.
+- WHY is the motivation, not the mechanics. "WHY: round-trip serialization
+  is needed before scan can be implemented" not "WHY: added serde derives."
+- Omit TRAPS or DEPENDS if genuinely not applicable, but default to
+  including them. Most commits have at least one trap or dependency worth
+  recording.
+- PR descriptions use the same format. For multi-commit PRs, the PR
+  description summarizes the session scope in WHY and lists the key
+  commits in WHAT.
+
+Example:
+
+feat: implement Snapshot types and round-trip serialization
+
+SESSION: 1
+WHY: orb-scan types are the foundation all downstream crates depend on;
+     serialization is needed before scan can write .orb/snapshot.json
+WHAT:
+- crates/orb-scan/src/lib.rs: all Snapshot types with Serialize/Deserialize
+- crates/orb-scan/src/lib.rs: write_snapshot, read_snapshot functions
+- crates/orb-scan/src/lib.rs: ScanError with thiserror derives
+- 8 unit tests including round-trip property test
+TRAPS: serde_json silently drops unknown fields — used #[serde(deny_unknown_fields)]
+       on Snapshot but #[serde(default)] on sub-types for forward compatibility.
+       These two strategies conflict if applied to the same type.
+DEPENDS: .orb/ directory is created by write_snapshot; callers must not
+         assume it exists before first scan.
+
+---
+
 ## Session Contract
 
 The project `CLAUDE.md` specifies the exact commands for this project's session
