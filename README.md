@@ -1,9 +1,11 @@
 # Livery
 
+**Version: 1.0.0**
+
 A methodology for producing high-quality code with agentic coding tools.
 
-> **Status: Active development. Interfaces change without notice. Use at your own risk.**
-> See [Stability](#stability) below before depending on this in your own projects.
+> **Status: v1.0 stable.** The methodology, standards files, and skill interfaces are
+> stable. See [Stability](#stability) below for versioning details.
 
 ---
 
@@ -115,20 +117,16 @@ baseline tool built without it.
 
 ## Stability
 
-**This repository is under active development.** Specifically:
+**v1.0 is stable.** Specifically:
 
-- File names, paths, and section headings in `CLAUDE-base.md` and the skill files
-  may change between commits. If you depend on this as a submodule, pin to a commit
-  hash rather than a branch.
-- The methodology itself is evolving as it is tested against real projects. Practices
-  that prove unhelpful will be removed; practices that prove essential will be added.
-- There is no versioning scheme yet. This will be addressed when the methodology
-  stabilises.
-- No backwards-compatibility guarantees are made at this stage.
+- File names, paths, and section headings in `CLAUDE-base.md`, the standards files,
+  and the skill files are stable. If you depend on this as a submodule, you can pin
+  to the v1.0.0 tag.
+- The methodology has been tested against real projects and the interfaces are settled.
+  Future changes will follow semantic versioning.
+- Breaking changes will only occur in major version increments.
 
-**Use at your own risk.** This is shared in the spirit of working in public, not as
-a finished product. If you adopt it and something breaks or produces bad output, that
-is on you. That said, issues and feedback are welcome.
+Issues and feedback are welcome.
 
 ---
 

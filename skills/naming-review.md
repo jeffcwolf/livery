@@ -67,7 +67,13 @@ path: &str          → project_dir: &Path    (meaning in type and name)
 
 If neither the name nor the type carries the critical information, one of them must.
 
-### Step 7 — Record in session log
+### Step 7 — Enumerate and document each name
+
+List every new name introduced this session. For each name, apply the ARC misunderstanding test and scope-proportionality test. Document the result for each.
+
+This step consolidates Steps 2 and 4 into a single enumerated record. The output is a table or list where every name appears exactly once, with a pass/fail result for each test and the rationale for any rename.
+
+### Step 8 — Record in session log
 
 In the `<project>/SESSIONS.md` entry, add a "Naming Review" section:
 ```

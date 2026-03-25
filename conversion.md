@@ -226,3 +226,25 @@ and adding features in the same session.
 The ground-up rebuild is lower-risk and produces cleaner results. When the existing
 codebase is poorly structured enough to warrant applying Livery, it is often better
 to rebuild than to restructure.
+
+---
+
+## Lessons from Structural Conversions
+
+The following lessons are drawn from applying the structural conversion workflow to the Scribe codebase. They are specific enough to be actionable and general enough to apply to any structural conversion project.
+
+### Tight mechanical prompts are mandatory for structural sessions
+
+Structural conversion sessions — visibility changes, module reorganisation, public interface reduction — require prompts that specify exact, mechanical transformations. Open-ended prompts like "clean up visibility" or "fix the public API" produce suppression rather than design: the agent reaches for `#[allow(dead_code)]` instead of determining whether the item is genuinely used, and marks items `pub` instead of `pub(crate)` because `pub` compiles without friction. The Session 22 `pub_ratio` episode is the canonical example: an open-ended prompt to "reduce unnecessary pub items" produced a session that added `#[allow(dead_code)]` to twenty-three items rather than investigating their actual usage. The fix was a prompt that said "for each `pub` item in this crate, find all call sites; if all callers are within the crate, change to `pub(crate)`; if there are no callers, remove the item." Mechanical prompts produce mechanical results. Open-ended prompts produce the path of least compiler resistance.
+
+### Session scope discipline is more critical in conversion than greenfield
+
+In greenfield development, a session that drifts slightly beyond its stated scope usually produces acceptable results — the new code is self-consistent and can be cleaned up later. In structural conversion, a session that crosses two structural concerns compounds errors in a way that is difficult to unwind. A session that changes both visibility and module structure simultaneously introduces ambiguity: when a test fails, is the failure caused by the visibility change, the module restructuring, or the interaction between them? The discipline of one structural concern per session is not a preference — it is a correctness requirement. Sessions that violate it spend more time debugging the interaction than they saved by combining the work.
+
+### Switch Prism to gate mode per-subsystem as soon as each subsystem is structurally complete
+
+The conversion workflow advises waiting until the full codebase is structurally complete before switching Prism from diagnostic to gate mode. In practice, this delay allows quality to drift in subsystems that were completed early — they accumulate new violations while the conversion continues elsewhere. The better approach is to switch each subsystem (typically a crate in a Rust workspace) to gate mode as soon as its structural conversion is complete. This means running `prism check <crate-path> --strict` per-crate rather than waiting for the whole-workspace gate. Early gate activation catches regressions immediately rather than discovering them in a bulk cleanup session at the end of the conversion.
+
+### #[allow(dead_code)] added during a structural conversion session is a session-end blocker
+
+During structural conversion, the agent frequently encounters items that appear unused after a visibility or module change. The reflexive response is to add `#[allow(dead_code)]` and move on. This is always wrong in a conversion context. The item is either genuinely dead (and should be removed) or its caller was moved or renamed earlier in the session (and the allow suppresses a real wiring error). Either way, `#[allow(dead_code)]` added during a structural session masks information the developer needs. Treat it as a session-end blocker: the session cannot close with any new `#[allow(dead_code)]` annotations that were not present at session start. Add this to the conversion stopping conditions alongside the existing reference validation step.
