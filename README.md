@@ -66,6 +66,7 @@ skills/               Reusable skill files invoked by the agent.
   update-architecture.md  Keep ARCHITECTURE.md honest after changes.
   add-crate.md        Add a new workspace crate.
   bug-fix.md          Reproduce → red test → fix → green.
+  write-spec.md       Structure a SPEC.md through forced-constraint steps.
 
 feedback/             Self-correction system.
   feedback-loop.md    Pattern detection and proposal protocol.

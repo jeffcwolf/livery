@@ -33,7 +33,7 @@ sets are created once, updated continuously, and never deleted.
 | `livery/standards/readable-code.md` | Phase 2 | Human |
 | `livery/standards/rust-specifics.md` | Phase 2 | Human |
 | `livery/standards/user.md` | Phase 2 | Human (optional) |
-| `livery/skills/` (8 generic skills) | Phase 2 | Human |
+| `livery/skills/` (9 generic skills) | Phase 2 | Human |
 | `livery/adapter-superpowers.md` | Phase 2 | Human (if runtime used) |
 | `livery/feedback/feedback-loop.md` | Phase 2 | Human |
 | `livery/feedback/enforcement.md` | Phase 2 | Human |
@@ -86,6 +86,9 @@ Without it, agents fill ambiguity with invention.
    to require iteration. Flag them explicitly so the architecture can isolate them.
 5. Record **non-negotiable constraints** (e.g. "must run offline," "must embed in a macOS
    app bundle," "must parse arbitrary UTF-8 input without panicking").
+
+Use `livery/skills/write-spec.md` to structure the specification process. The skill
+walks through each required section as a forced-constraint conversation.
 
 If a runtime with structured brainstorming is present (see the project's adapter
 document, e.g. `livery/adapter-superpowers.md`), the runtime's brainstorming skill may
