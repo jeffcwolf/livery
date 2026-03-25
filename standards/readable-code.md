@@ -168,6 +168,12 @@ reader must now process both the code and the comment, and verify they agree.
 The *what* is in the code. The *why* — the intention, the constraint, the non-obvious
 tradeoff, the historical reason — is not in the code, and belongs in a comment.
 
+This rule governs inline comments — the `//` annotations within function bodies and
+at the top of private items. For doc comments on public items (`///` and `//!`),
+apply Ousterhout's contract standard instead: describe what is guaranteed, what
+preconditions apply, and what errors are returned — never the implementation mechanism
+that delivers those guarantees.
+
 ```rust
 // BAD: restates the code
 // Sort entries by filename
