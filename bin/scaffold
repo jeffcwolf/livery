@@ -6,7 +6,7 @@ set -euo pipefail
 # Reads SPEC.md and ARCHITECTURE.md, generates:
 #   - Workspace Cargo.toml and per-crate scaffolds
 #   - CLAUDE.md (project constitution)
-#   - scripts/validate.sh
+#   - scripts/validate.sh (with graduated quality thresholds)
 #   - prism.toml
 #   - standards/project.md
 #   - skills/ directory
@@ -225,26 +225,36 @@ serde_json = \"1\"
 [workspace.lints.clippy]
 all = \"warn\""
 
+# Handle existing non-workspace Cargo.toml (e.g., from cargo init/new)
 if [[ -f "Cargo.toml" ]] && ! grep -q '\[workspace\]' Cargo.toml; then
-    warn "Cargo.toml exists but is not a workspace."
-    echo "  Scaffold needs a workspace Cargo.toml. Replace it? (y/n)"
-    read -r answer
-    if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
-        mv Cargo.toml Cargo.toml.bak
-        info "Backed up existing Cargo.toml to Cargo.toml.bak"
-        echo "$CARGO_ROOT" > Cargo.toml
-        info "Created Cargo.toml — workspace root"
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  [dry-run] Would replace non-workspace Cargo.toml with workspace"
     else
-        error "Cannot proceed without a workspace Cargo.toml. Aborting."
-        exit 1
+        warn "Cargo.toml exists but is not a workspace."
+        echo "  Scaffold needs a workspace Cargo.toml. Replace it? (y/n)"
+        read -r answer
+        if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+            mv Cargo.toml Cargo.toml.bak
+            info "Backed up existing Cargo.toml to Cargo.toml.bak"
+            echo "$CARGO_ROOT" > Cargo.toml
+            info "Created Cargo.toml — workspace root"
+        else
+            error "Cannot proceed without a workspace Cargo.toml. Aborting."
+            exit 1
+        fi
     fi
 else
     write_file "Cargo.toml" "$CARGO_ROOT" "workspace root"
 fi
 
-if [[ -f "src/main.rs" && -d "crates" ]]; then
-    mv src/main.rs src/main.rs.bak
-    info "Moved orphan src/main.rs to src/main.rs.bak (binary is in crates/)"
+# Clean up orphan src/main.rs from cargo init/new
+if [[ -f "src/main.rs" ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  [dry-run] Would move orphan src/main.rs to src/main.rs.bak"
+    else
+        mv src/main.rs src/main.rs.bak
+        info "Moved orphan src/main.rs to src/main.rs.bak (binary is in crates/)"
+    fi
 fi
 
 # --- Generate per-crate scaffolds ---
@@ -317,7 +327,6 @@ serde_json = { workspace = true }
 [dev-dependencies]"
 
         # Derive a PascalCase error type name from crate name
-        # e.g., myproject-core -> MyprojCoreError (simplified)
         error_name=$(echo "$name" | sed 's/-/_/g' | awk -F'_' '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1' OFS='')
         error_name="${error_name}Error"
 
@@ -338,7 +347,6 @@ done
 
 # --- Extract constraints from SPEC.md ---
 
-# Pull non-negotiable constraints (§7) for CLAUDE.md
 CONSTRAINTS=""
 IN_CONSTRAINTS=false
 while IFS= read -r line; do
@@ -350,7 +358,6 @@ while IFS= read -r line; do
         break
     fi
     if [[ "$IN_CONSTRAINTS" == true && "$line" =~ ^[0-9]+\. ]]; then
-        # Extract the bold constraint text
         constraint=$(echo "$line" | sed 's/^[0-9]*\.[[:space:]]*//' | sed 's/\*\*//g' | sed 's/\.$//')
         CONSTRAINTS+="- ${constraint}"$'\n'
     fi
@@ -360,7 +367,6 @@ done < SPEC.md
 
 header "Generating CLAUDE.md..."
 
-# Build crate responsibilities list
 CRATE_RESP=""
 for i in "${!CRATE_NAMES[@]}"; do
     CRATE_RESP+="- \`${CRATE_NAMES[$i]}\` — ${CRATE_DESCS[$i]}"$'\n'
@@ -433,7 +439,7 @@ scripts/validate.sh
 
 write_file "CLAUDE.md" "$CLAUDE_MD" "project constitution"
 
-# --- Generate scripts/validate.sh ---
+# --- Generate scripts/validate.sh (with graduated thresholds) ---
 
 header "Generating validation pipeline..."
 
@@ -451,14 +457,56 @@ cargo test --workspace
 
 echo "=== Prism quality gate ==="
 if [ -x livery/bin/prism ]; then
-    livery/bin/prism check . --strict --no-deps --no-coverage
+    # Count Rust lines (excluding test fixtures and target/)
+    LOC=$(find crates -name "*.rs" -not -path "*/target/*" -not -path "*/fixtures/*" \
+          | xargs cat 2>/dev/null | wc -l | tr -d " ")
+
+    if [ "$LOC" -lt 500 ]; then
+        # Early project: stubs dilute ratios, no integration targets yet
+        cat > /tmp/prism-graduated.toml << '\''TOML'\''
+[quality]
+min_doc_coverage = 40
+max_cyclomatic = 20
+max_cognitive = 30
+max_fn_lines_warn = 100
+max_fn_lines_fail = 200
+[testing]
+min_test_ratio = 0.5
+require_integration_tests = false
+[safety]
+max_unsafe_blocks = 0
+TOML
+        echo "  (graduated thresholds: early project, ${LOC} LOC)"
+        livery/bin/prism check . --config /tmp/prism-graduated.toml --no-deps --no-coverage
+    elif [ "$LOC" -lt 2000 ]; then
+        # Growing project: real implementation exists, raise the bar
+        cat > /tmp/prism-graduated.toml << '\''TOML'\''
+[quality]
+min_doc_coverage = 60
+max_cyclomatic = 20
+max_cognitive = 30
+max_fn_lines_warn = 100
+max_fn_lines_fail = 200
+[testing]
+min_test_ratio = 1.0
+require_integration_tests = false
+[safety]
+max_unsafe_blocks = 0
+TOML
+        echo "  (graduated thresholds: growing project, ${LOC} LOC)"
+        livery/bin/prism check . --config /tmp/prism-graduated.toml --no-deps --no-coverage
+    else
+        # Mature project: full production thresholds
+        echo "  (production thresholds: ${LOC} LOC)"
+        livery/bin/prism check . --strict --no-deps --no-coverage
+    fi
 else
     echo "WARNING: livery/bin/prism not executable. Run prism check manually."
 fi
 
 echo "=== All gates passed ==="'
 
-write_file "scripts/validate.sh" "$VALIDATE_SH" "validation pipeline"
+write_file "scripts/validate.sh" "$VALIDATE_SH" "validation pipeline (graduated thresholds)"
 
 if [[ "$DRY_RUN" != true && -f "scripts/validate.sh" ]]; then
     chmod +x scripts/validate.sh
@@ -468,7 +516,11 @@ fi
 
 header "Generating quality configuration..."
 
-PRISM_TOML='[quality]
+PRISM_TOML='# Production quality thresholds — the definition of done.
+# During early development, scripts/validate.sh uses graduated
+# thresholds based on codebase size. These are the targets.
+
+[quality]
 min_doc_coverage = 80
 max_cyclomatic = 20
 max_cognitive = 30
@@ -476,13 +528,13 @@ max_fn_lines_warn = 100
 max_fn_lines_fail = 200
 
 [testing]
-min_test_ratio = 1.0
+min_test_ratio = 2.0
 require_integration_tests = true
 
 [safety]
 max_unsafe_blocks = 0'
 
-write_file "prism.toml" "$PRISM_TOML" "quality thresholds"
+write_file "prism.toml" "$PRISM_TOML" "quality thresholds (production targets)"
 
 # --- Generate standards/project.md ---
 
@@ -548,7 +600,6 @@ Cargo.lock
 if [[ "$DRY_RUN" == true ]]; then
     echo "  [dry-run] Would update .gitignore"
 elif [[ -f ".gitignore" ]]; then
-    # Append only entries that don't already exist
     while IFS= read -r entry; do
         if [[ -n "$entry" ]] && ! grep -qxF "$entry" .gitignore 2>/dev/null; then
             echo "$entry" >> .gitignore
@@ -586,8 +637,8 @@ echo "    Cargo.toml             Workspace root"
 for name in "${CRATE_NAMES[@]}"; do
     echo "    crates/${name}/     Crate scaffold"
 done
-echo "    scripts/validate.sh    Validation pipeline"
-echo "    prism.toml             Quality thresholds"
+echo "    scripts/validate.sh    Validation pipeline (graduated thresholds)"
+echo "    prism.toml             Quality thresholds (production targets)"
 echo "    standards/project.md   Project conventions (empty)"
 echo "    skills/                Project skills directory"
 echo "    SESSIONS.md            Session log"
