@@ -225,7 +225,27 @@ serde_json = \"1\"
 [workspace.lints.clippy]
 all = \"warn\""
 
-write_file "Cargo.toml" "$CARGO_ROOT" "workspace root"
+if [[ -f "Cargo.toml" ]] && ! grep -q '\[workspace\]' Cargo.toml; then
+    warn "Cargo.toml exists but is not a workspace."
+    echo "  Scaffold needs a workspace Cargo.toml. Replace it? (y/n)"
+    read -r answer
+    if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+        mv Cargo.toml Cargo.toml.bak
+        info "Backed up existing Cargo.toml to Cargo.toml.bak"
+        echo "$CARGO_ROOT" > Cargo.toml
+        info "Created Cargo.toml — workspace root"
+    else
+        error "Cannot proceed without a workspace Cargo.toml. Aborting."
+        exit 1
+    fi
+else
+    write_file "Cargo.toml" "$CARGO_ROOT" "workspace root"
+fi
+
+if [[ -f "src/main.rs" && -d "crates" ]]; then
+    mv src/main.rs src/main.rs.bak
+    info "Moved orphan src/main.rs to src/main.rs.bak (binary is in crates/)"
+fi
 
 # --- Generate per-crate scaffolds ---
 
