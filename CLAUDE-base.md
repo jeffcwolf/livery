@@ -367,12 +367,14 @@ cargo fmt --check
 cargo clippy --workspace -- -D warnings
 livery/bin/prism check . --strict
 livery/bin/prism stats . --json > /tmp/prism-session-after.json
+livery/bin/prism diff /tmp/prism-session-before.json .
 ```
 
-Compute the delta between before and after JSON. Write the delta directly into the
-SESSIONS.md entry: `rust_lines`, `tests` (unit/integration/doctest breakdown),
-`test_ratio`, `doc_coverage`, `pub_ratio`, `max_cyclomatic`, `max_cognitive`,
-`fns_over_50_lines`.
+Record any regressions flagged by `prism diff`. Non-regression deltas are recorded
+as a summary table.
+
+> **Exit code semantics:** 0 = pass, 1 = warn, 2 = fail. `prism diff` exits non-zero
+> when regressions are detected — this blocks the session or requires justification.
 
 If `prism check . --strict` exits non-zero, the session is not done. Fix the
 violations before proceeding. This is non-negotiable.

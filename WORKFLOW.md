@@ -426,6 +426,7 @@ unstructured prompts produce unstructured work.
 - [ ] `livery/skills/review-docs.md` completed (if public items added/modified)
 - [ ] `livery/skills/naming-review.md` completed (if new names introduced)
 - [ ] `<project>/SESSIONS.md` updated with this session's entry
+- [ ] `prism diff /tmp/prism-session-before.json .` — no regressions, or each regression justified in SESSIONS.md
 
 **Constraints:**
 - Follow livery/CLAUDE-base.md and <project>/CLAUDE.md in full.
@@ -466,9 +467,8 @@ unstructured prompts produce unstructured work.
 **Files changed:** [list]
 
 **Prism baseline delta:**
-- Before: [key metrics from prism-session-before.json]
-- After:  [key metrics from prism-session-after.json]
-- Notes:  [Any metric that moved — positive or negative — explained]
+[paste prism diff summary table, or "No regressions. All 13 metrics stable or improved."]
+Notes: [any accepted regression and why]
 
 **Open issues / deferred items:**
 - [Anything that came up but was intentionally deferred]
@@ -524,13 +524,14 @@ metric has degraded.
 livery/bin/prism check . --strict --fix-suggestions   # Quality gate
 livery/bin/prism audit .                              # Module depth report
 livery/bin/prism stats . --json > /tmp/prism-session-after.json  # Save for delta
+livery/bin/prism diff /tmp/prism-session-before.json .            # Baseline delta comparison
 livery/bin/prism map . --mermaid                      # Visual structure check
 ```
 
-**Baseline delta tracking:** Compare `livery/bin/prism stats --json` output against the
-session-start baseline (captured automatically per CLAUDE-base.md §Automated Quality
-Gate Protocol). Any metric that worsened requires a `<project>/SESSIONS.md` note
-explaining why — or it must be fixed before the session closes.
+**Baseline delta tracking:** Run `livery/bin/prism diff /tmp/prism-session-before.json .`
+to compare against the session-start baseline (captured automatically per CLAUDE-base.md
+§Automated Quality Gate Protocol). Any regression flagged by `prism diff` requires a
+`<project>/SESSIONS.md` note explaining why — or it must be fixed before the session closes.
 
 **Failure response:** The session is not complete until `<project>/scripts/validate.sh`
 exits 0.
