@@ -81,6 +81,7 @@ docs/                 Rationale documents (human-facing).
 bin/                  Pre-compiled tooling.
   prism               Automated quality gate binary.
   README.md           Build and rebuild instructions.
+  scaffold            shell script, runs anywhere
 
 ---
 
