@@ -107,6 +107,7 @@ Prism's five subcommands each address a distinct validation concern:
 | `prism stats --json` | Quantitative baseline snapshot for delta comparison | Session-end (saved and compared) |
 | `prism map --mermaid` | Actual dependency graph for comparison against ARCHITECTURE.md | Milestone, architecture changes |
 | `prism deps` | Dependency health (stale deps, duplicate versions) | Milestone, pre-release |
+| `prism diff` | Compares two prism snapshots and reports regressions. Flags regressions with exit codes (0 = pass, 1 = warn, 2 = fail). | Session-end |
 
 The **dogfood gate** — `mint check .` run on the `mint` repository itself — is the
 ultimate integration test. The tool must be able to process its own codebase. This
@@ -123,6 +124,7 @@ requirement is in the v1.0 checklist in `<project>/SPEC.md` and is verified by
 | Per-commit gates | `AGENTIC_WORKFLOW.md` Phase 4 Layer 1 | Pre-commit hook; `scripts/validate.sh` |
 | Per-session validation pipeline | `livery/skills/run-validation.md` | Session contract in `livery/CLAUDE-base.md` |
 | Prism baseline delta | `livery/skills/run-validation.md` Step 5 | Saved per session; compared at session end |
+| Prism diff regression check | `livery/CLAUDE-base.md` §Automated Quality Gate Protocol; `livery/skills/run-validation.md` Step 5 | `prism diff` exit code gates session completion |
 | Milestone architectural review | `AGENTIC_WORKFLOW.md` Phase 4 Layer 3 | Human-led; mandatory before milestone close |
 | CI mirrors local validation | `AGENTIC_WORKFLOW.md` Phase 5 | GitHub Actions: check → test → prism jobs |
 | Prism design-quality gate in CI | `AGENTIC_WORKFLOW.md` Phase 5 Job 3 | `prism check . --json --strict` as a CI job |

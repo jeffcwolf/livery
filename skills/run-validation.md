@@ -64,9 +64,11 @@ execution. Leave `[PRISM: manual]` in the SESSIONS.md entry. Do not skip the gat
 livery/bin/prism stats . --json > /tmp/prism-session-after.json
 ```
 
-Compare against the session-start baseline (captured at the beginning of the session
-per CLAUDE-base.md §Automated Quality Gate Protocol, stored at
-`/tmp/prism-session-before.json`). Any metric that worsened requires a note in the
+```bash
+livery/bin/prism diff /tmp/prism-session-before.json .
+```
+
+Any metric that worsened requires a note in the
 `<project>/SESSIONS.md` entry explaining why — or it must be fixed.
 
 Key metrics to track:

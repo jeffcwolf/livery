@@ -269,6 +269,9 @@ livery/bin/prism check . --strict
 
 # Stats for delta calculation
 livery/bin/prism stats . --json > /tmp/prism-session-after.json
+
+# Baseline delta comparison
+livery/bin/prism diff /tmp/prism-session-before.json .
 ```
 
 If `prism check . --strict` exits non-zero, the session is not done.
@@ -294,11 +297,10 @@ After the quality gate passes:
    contract-oriented doc comments on all new/modified public items.
    Run `RUSTDOCFLAGS="-D missing_docs" cargo doc --no-deps --workspace`.
 
-4. **Prism Baseline Delta** — diff `/tmp/prism-session-before.json`
-   against `/tmp/prism-session-after.json`. Write delta into the
-   SESSIONS.md entry: `rust_lines`, `tests` (unit/integration/doctest),
-   `test_ratio`, `doc_coverage`, `pub_ratio`, `max_cyclomatic`,
-   `max_cognitive`, `fns_over_50_lines`.
+4. **Prism Baseline Delta** — run
+   `livery/bin/prism diff /tmp/prism-session-before.json .` and write
+   the output into the SESSIONS.md entry. Prism diff compares all 13
+   metrics and flags regressions automatically.
 
 ### 5.6 Session Entry (Livery)
 
@@ -329,9 +331,8 @@ The agent writes the SESSIONS.md entry:
 - [list]
 
 **Prism baseline delta:**
-- Before: [key numbers]
-- After: [key numbers]
-- Delta: [direction and magnitude of change]
+[paste prism diff summary table, or "No regressions. All 13 metrics stable or improved."]
+Notes: [any accepted regression and why]
 
 **Red Flag Audit:**
 - Ran against: [files]
