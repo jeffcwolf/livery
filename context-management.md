@@ -121,8 +121,10 @@ orchestrator.
    Review. These read files and produce findings — context-consuming
    operations. Run them now, not later.
 
-4. **Compute Prism delta.** Diff before and after JSON. Hold the
-   numbers for the SESSIONS.md entry.
+4. **Compute Prism delta.** Run
+   `livery/bin/prism diff /tmp/prism-session-before.json .` to compare
+   the before-snapshot against the current state. Hold the output for
+   the SESSIONS.md entry.
 
 5. **If Prism gate fails:** fix the violations if the fix is small and
    well-understood. If the fix requires substantial work, record it as
