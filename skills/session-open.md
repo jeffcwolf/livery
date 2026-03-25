@@ -103,7 +103,21 @@ and the single-responsibility principle. ARC and Ousterhout converge here: if yo
 cannot name it, it probably needs to be split. Resolve the design question before
 choosing a name.
 
-### Step 6 — Create the process log
+### Step 6 — Constitution check
+
+Before writing any code, state back the three rules from the loaded standards files
+that are most relevant to this session's scope. For example, if the session involves
+designing a new module, cite the specific Ousterhout principle that applies. If the
+session involves writing a parser, cite the property test mandate for transformation
+functions.
+
+If you cannot state three specific, relevant rules, you did not load the constitution
+properly. Go back and re-read `CLAUDE-base.md` and the relevant standards files.
+
+This step produces no artifact — it is a self-check. Record the three rules in the
+session process log as a `CONSTITUTION_CHECK` entry.
+
+### Step 7 — Create the process log
 
 Create the session process log file before any other action:
 
@@ -114,7 +128,7 @@ process/SESSION-NNN.md
 See CLAUDE-base.md §Session Process Log for the format. The first entries will be
 `READ` entries for each file loaded in Steps 3 and 5.
 
-### Step 7 — Record the session opening in `<project>/SESSIONS.md`
+### Step 8 — Record the session opening in `<project>/SESSIONS.md`
 
 Add the session header before writing any code:
 
