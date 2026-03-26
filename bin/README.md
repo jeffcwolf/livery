@@ -18,7 +18,9 @@ against thresholds defined in the project's `prism.toml`.
 **Used by:**
 - The agent at session start: `livery/bin/prism stats . --json`
 - The agent at session end: `livery/bin/prism check . --strict`
-- The agent at session end: `prism diff /tmp/prism-session-before.json .`
+- The agent at session end: `livery/bin/prism diff /tmp/prism-session-before.json .`
+- The agent at session end: `livery/bin/prism focus .`
+- At milestone reviews: `livery/bin/prism trend <baselines-dir>/`
 - See CLAUDE-base.md §Automated Quality Gate Protocol for the full
   sequence.
 

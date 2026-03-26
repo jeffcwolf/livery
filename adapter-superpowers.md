@@ -272,6 +272,9 @@ livery/bin/prism stats . --json > /tmp/prism-session-after.json
 
 # Baseline delta comparison
 livery/bin/prism diff /tmp/prism-session-before.json .
+
+# Prioritized refactoring targets
+livery/bin/prism focus .
 ```
 
 If `prism check . --strict` exits non-zero, the session is not done.
@@ -301,6 +304,10 @@ After the quality gate passes:
    `livery/bin/prism diff /tmp/prism-session-before.json .` and write
    the output into the SESSIONS.md entry. Prism diff compares all 13
    metrics and flags regressions automatically.
+
+5. **Prism Focus** — run `livery/bin/prism focus .` and record the
+   top-ranked item in the SESSIONS.md entry. This identifies the
+   highest-impact refactoring target for the next session.
 
 ### 5.6 Session Entry (Livery)
 
