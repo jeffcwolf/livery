@@ -390,6 +390,35 @@ CLAUDE_MD="# CLAUDE.md — ${PROJECT_NAME}
 
 ---
 
+### Commit Message Format
+
+Every commit must use this format:
+
+\`\`\`
+<type>: <what changed>
+
+SESSION: <N>
+WHY: <why this change was made — the motivation, not the mechanics>
+WHAT:
+- <specific change 1>
+- <specific change 2>
+TRAPS: <anything surprising, gotchas, or things that broke and were fixed>
+DEPENDS: <what this change assumes or relies on>
+\`\`\`
+
+Types: \`feat:\`, \`fix:\`, \`refactor:\`, \`test:\`, \`docs:\`, \`style:\`, \`chore:\`
+
+Rules:
+- Commit after each discrete, compiling change.
+- Never commit code that does not compile or has failing tests.
+- Single-line commit messages like \"implement feature X\" are NOT acceptable.
+- TRAPS is the most important field — if you hit a problem and solved it, say so.
+- WHAT should name files changed and decisions made, 2–5 lines.
+- Omit TRAPS or DEPENDS only if genuinely not applicable.
+- PR descriptions use the same format.
+
+---
+
 ## Reference Documents
 
 | Document | Path |
@@ -424,33 +453,6 @@ cargo fmt --check
 cargo clippy --workspace -- -D warnings
 scripts/validate.sh
 \`\`\`
-
-### Commit Message Format
-
-Every commit must use this format:
-
-\`\`\`
-<type>: <what changed>
-
-SESSION: <N>
-WHY: <why this change was made — the motivation, not the mechanics>
-WHAT:
-- <specific change 1>
-- <specific change 2>
-TRAPS: <anything surprising, gotchas, or things that broke and were fixed>
-DEPENDS: <what this change assumes or relies on>
-\`\`\`
-
-Types: \`feat:\`, \`fix:\`, \`refactor:\`, \`test:\`, \`docs:\`, \`style:\`, \`chore:\`
-
-Rules:
-- Commit after each discrete, compiling change.
-- Never commit code that does not compile or has failing tests.
-- Single-line commit messages like \"implement feature X\" are NOT acceptable.
-- TRAPS is the most important field — if you hit a problem and solved it, say so.
-- WHAT should name files changed and decisions made, 2–5 lines.
-- Omit TRAPS or DEPENDS only if genuinely not applicable.
-- PR descriptions use the same format.
 
 ---
 
