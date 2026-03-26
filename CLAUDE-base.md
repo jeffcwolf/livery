@@ -380,10 +380,12 @@ cargo clippy --workspace -- -D warnings
 livery/bin/prism check . --strict
 livery/bin/prism stats . --json > /tmp/prism-session-after.json
 livery/bin/prism diff /tmp/prism-session-before.json .
+livery/bin/prism focus .
 ```
 
 Record any regressions flagged by `prism diff`. Non-regression deltas are recorded
-as a summary table.
+as a summary table. Record the top item from `prism focus` in the SESSIONS.md entry
+as the highest-priority refactoring target going into the next session.
 
 > **Exit code semantics:** 0 = pass, 1 = warn, 2 = fail. `prism diff` exits non-zero
 > when regressions are detected — this blocks the session or requires justification.

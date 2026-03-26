@@ -108,6 +108,8 @@ Prism's five subcommands each address a distinct validation concern:
 | `prism map --mermaid` | Actual dependency graph for comparison against ARCHITECTURE.md | Milestone, architecture changes |
 | `prism deps` | Dependency health (stale deps, duplicate versions) | Milestone, pre-release |
 | `prism diff` | Compares two prism snapshots and reports regressions. Flags regressions with exit codes (0 = pass, 1 = warn, 2 = fail). | Session-end |
+| `prism focus` | Prioritized refactoring guidance ranked by composite impact score. | Session-end |
+| `prism trend` | Multi-session trend detection — flags metrics with 3+ consecutive sessions of decline. | Milestone review |
 
 The **dogfood gate** — `mint check .` run on the `mint` repository itself — is the
 ultimate integration test. The tool must be able to process its own codebase. This

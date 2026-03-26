@@ -473,6 +473,8 @@ unstructured prompts produce unstructured work.
 [paste prism diff summary table, or "No regressions. All 13 metrics stable or improved."]
 Notes: [any accepted regression and why]
 
+**Prism focus (top item):** [top-ranked item from `prism focus .`, or "none — no findings"]
+
 **Mutation check:** [not run / run on `<files>` — N mutants tested, M survived (details below)]
 
 **Open issues / deferred items:**
@@ -530,6 +532,7 @@ livery/bin/prism check . --strict --fix-suggestions   # Quality gate
 livery/bin/prism audit .                              # Module depth report
 livery/bin/prism stats . --json > /tmp/prism-session-after.json  # Save for delta
 livery/bin/prism diff /tmp/prism-session-before.json .            # Baseline delta comparison
+livery/bin/prism focus .                              # Prioritized refactoring targets
 livery/bin/prism map . --mermaid                      # Visual structure check
 ```
 
@@ -559,7 +562,10 @@ completion, a version increment).
 2. Does `prism map --mermaid` show the intended dependency graph? Are there unexpected
    edges?
 3. Are all public API items documented with accurate doc comments and doctests?
-4. Have any modules drifted shallow? Does `prism audit` flag items that weren't flagged
+4. Does `livery/bin/prism trend <baselines-dir>` show any metrics with 3+ consecutive
+   sessions of decline? Trend detection catches gradual degradation that single-session
+   `prism diff` misses. Save session baselines to a `baselines/` directory to enable this.
+5. Have any modules drifted shallow? Does `prism audit` flag items that weren't flagged
    at the last milestone?
 5. Is the property-test coverage adequate? Are there public data-transforming functions
    without proptest strategies?
