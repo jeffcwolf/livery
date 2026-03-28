@@ -129,6 +129,11 @@ Project-specific skills live in `<project>/skills/` and reference project types 
 | File | Purpose |
 |---|---|
 | `livery/bin/prism` | Pre-compiled Prism binary for automated quality gates. Run by the agent at session start (baseline) and session end (gate check + delta). |
+| `livery/bin/scaffold` | Project scaffold generator. Reads SPEC.md and ARCHITECTURE.md, generates workspace, CLAUDE.md, validate.sh, and support files. Run during Phase 2 setup. |
+| `livery/bin/tdd-audit` | Checks git history for test-before-implementation evidence. Level 4 gate. Run at session-end validation. |
+| `livery/bin/lint-rules` | Grep-based checks for .unwrap(), weak assertions, #[allow(dead_code)], missing docs, vague test names. Level 4 gate. Run at session-end validation. |
+| `livery/bin/refactor-check` | Checks that REFACTOR-EVIDENCE.md exists with three passes documented. Level 3 gate. Run at session-end validation. |
+| `livery/bin/commit-check` | Checks commit messages follow structured format. Level 4 gate. Run at session-end validation. |
 | `livery/bin/README.md` | Build instructions, cross-compilation notes, and fallback protocol. |
 
 ---
