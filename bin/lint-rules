@@ -1,0 +1,297 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# livery/bin/lint-rules — Livery-specific lint checks
+#
+# Grep-based checks for anti-patterns that cargo clippy does not catch.
+# These are Level 4 (automated gate) enforcement of rules that were
+# previously Level 1 (prose).
+#
+# Checks:
+#   1. No .unwrap() in library code without // SAFETY: comment
+#   2. No assert!(result.is_ok()) or assert!(result.is_err()) in tests
+#   3. No #[allow(dead_code)] in non-test code
+#   4. Doc comments on all pub items (RUSTDOCFLAGS gate)
+#   5. No test functions named test_<function_name> (must be behaviour-named)
+#
+# Exit codes:
+#   0 — all checks pass
+#   1 — warnings found (non-blocking)
+#   2 — violations found (blocking)
+#
+# Usage:
+#   livery/bin/lint-rules              # check entire workspace
+#   livery/bin/lint-rules --warn-only  # report but don't fail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+WARN_ONLY=false
+VIOLATIONS=0
+WARNINGS=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --warn-only)
+            WARN_ONLY=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: lint-rules [--warn-only]"
+            echo ""
+            echo "Livery-specific lint checks beyond cargo clippy."
+            echo ""
+            echo "Checks:"
+            echo "  1. No .unwrap() in library src/ without // SAFETY:"
+            echo "  2. No assert!(result.is_ok()) or assert!(result.is_err())"
+            echo "  3. No #[allow(dead_code)] in non-test code"
+            echo "  4. RUSTDOCFLAGS missing_docs gate"
+            echo "  5. Behaviour-named tests (no test_<fn_name> pattern)"
+            echo ""
+            echo "Options:"
+            echo "  --warn-only  Report findings but exit 0"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+echo -e "${BOLD}=== Livery Lint Rules ===${NC}"
+echo ""
+
+# Find all crate source directories (exclude tests/ directories and test modules)
+find_lib_src_files() {
+    # Find .rs files under crates/*/src/, excluding files in tests/ directories
+    # and excluding the binary crate's main.rs
+    find crates/*/src -name '*.rs' \
+        -not -path '*/tests/*' \
+        -not -name 'main.rs' \
+        2>/dev/null || true
+}
+
+find_all_src_files() {
+    find crates/*/src -name '*.rs' \
+        -not -path '*/tests/*' \
+        2>/dev/null || true
+}
+
+find_test_files() {
+    find crates/*/tests -name '*.rs' 2>/dev/null || true
+    find crates/*/src -name '*.rs' 2>/dev/null || true
+}
+
+# --- Check 1: .unwrap() in library code without SAFETY comment ---
+
+echo -e "${BOLD}Check 1: .unwrap() in library code${NC}"
+
+UNWRAP_VIOLATIONS=0
+while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+
+    # Process file: find .unwrap() calls that are not in #[cfg(test)] blocks
+    # and don't have a // SAFETY: comment on the same or preceding line
+    IN_TEST_MOD=false
+    LINE_NUM=0
+    PREV_LINE=""
+
+    while IFS= read -r line; do
+        LINE_NUM=$((LINE_NUM + 1))
+
+        # Track whether we're inside a #[cfg(test)] module
+        if echo "$line" | grep -qE '#\[cfg\(test\)\]'; then
+            IN_TEST_MOD=true
+        fi
+
+        if [[ "$IN_TEST_MOD" == true ]]; then
+            PREV_LINE="$line"
+            continue
+        fi
+
+        # Check for .unwrap() on this line
+        if echo "$line" | grep -qE '\.unwrap\(\)'; then
+            # Check this line and previous line for SAFETY comment
+            if ! echo "$line" | grep -qiE '// SAFETY:' && \
+               ! echo "$PREV_LINE" | grep -qiE '// SAFETY:'; then
+                # Also allow .expect() pattern (which is preferred)
+                if ! echo "$line" | grep -qE '\.expect\('; then
+                    echo -e "  ${RED}✗${NC} $file:$LINE_NUM — .unwrap() without // SAFETY:"
+                    echo "    $line"
+                    UNWRAP_VIOLATIONS=$((UNWRAP_VIOLATIONS + 1))
+                fi
+            fi
+        fi
+
+        PREV_LINE="$line"
+    done < "$file"
+done <<< "$(find_lib_src_files)"
+
+if [[ "$UNWRAP_VIOLATIONS" -eq 0 ]]; then
+    echo -e "  ${GREEN}✓${NC} No unguarded .unwrap() in library code."
+else
+    echo -e "  ${RED}Found $UNWRAP_VIOLATIONS violation(s).${NC}"
+    echo "  Use .expect(\"reason\") or add // SAFETY: explaining why panic is impossible."
+    VIOLATIONS=$((VIOLATIONS + UNWRAP_VIOLATIONS))
+fi
+echo ""
+
+# --- Check 2: assert!(result.is_ok()) / assert!(result.is_err()) ---
+
+echo -e "${BOLD}Check 2: Weak test assertions${NC}"
+
+WEAK_ASSERT_COUNT=0
+while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+
+    # Look for assert!(....is_ok()) or assert!(....is_err())
+    MATCHES=$(grep -nE 'assert!\(.*\.is_ok\(\)\)' "$file" 2>/dev/null || true)
+    MATCHES+=$(grep -nE 'assert!\(.*\.is_err\(\)\)' "$file" 2>/dev/null || true)
+
+    if [[ -n "$MATCHES" ]]; then
+        while IFS= read -r match; do
+            [[ -z "$match" ]] && continue
+            echo -e "  ${RED}✗${NC} $file:$match"
+            WEAK_ASSERT_COUNT=$((WEAK_ASSERT_COUNT + 1))
+        done <<< "$MATCHES"
+    fi
+done <<< "$(find_all_src_files)"
+
+# Also check integration test files
+while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    MATCHES=$(grep -nE 'assert!\(.*\.is_ok\(\)\)|assert!\(.*\.is_err\(\)\)' "$file" 2>/dev/null || true)
+    if [[ -n "$MATCHES" ]]; then
+        while IFS= read -r match; do
+            [[ -z "$match" ]] && continue
+            echo -e "  ${RED}✗${NC} $file:$match"
+            WEAK_ASSERT_COUNT=$((WEAK_ASSERT_COUNT + 1))
+        done <<< "$MATCHES"
+    fi
+done <<< "$(find crates/*/tests -name '*.rs' 2>/dev/null || true)"
+
+if [[ "$WEAK_ASSERT_COUNT" -eq 0 ]]; then
+    echo -e "  ${GREEN}✓${NC} No weak assertions found."
+else
+    echo -e "  ${RED}Found $WEAK_ASSERT_COUNT weak assertion(s).${NC}"
+    echo "  Replace assert!(x.is_ok()) with x.unwrap() or match/assert_eq!."
+    echo "  Replace assert!(x.is_err()) with assert!(matches!(x, Err(..))) with specific variant."
+    VIOLATIONS=$((VIOLATIONS + WEAK_ASSERT_COUNT))
+fi
+echo ""
+
+# --- Check 3: #[allow(dead_code)] in non-test code ---
+
+echo -e "${BOLD}Check 3: #[allow(dead_code)] in non-test code${NC}"
+
+DEAD_CODE_COUNT=0
+while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+
+    IN_TEST_MOD=false
+    LINE_NUM=0
+
+    while IFS= read -r line; do
+        LINE_NUM=$((LINE_NUM + 1))
+
+        if echo "$line" | grep -qE '#\[cfg\(test\)\]'; then
+            IN_TEST_MOD=true
+        fi
+
+        if [[ "$IN_TEST_MOD" == true ]]; then
+            continue
+        fi
+
+        if echo "$line" | grep -qE '#\[allow\(dead_code\)\]'; then
+            echo -e "  ${RED}✗${NC} $file:$LINE_NUM — #[allow(dead_code)]"
+            DEAD_CODE_COUNT=$((DEAD_CODE_COUNT + 1))
+        fi
+    done < "$file"
+done <<< "$(find_all_src_files)"
+
+if [[ "$DEAD_CODE_COUNT" -eq 0 ]]; then
+    echo -e "  ${GREEN}✓${NC} No #[allow(dead_code)] in non-test code."
+else
+    echo -e "  ${RED}Found $DEAD_CODE_COUNT instance(s).${NC}"
+    echo "  Investigate the caller chain instead of suppressing the warning."
+    echo "  If genuinely unused, remove the item. If used, fix the visibility."
+    VIOLATIONS=$((VIOLATIONS + DEAD_CODE_COUNT))
+fi
+echo ""
+
+# --- Check 4: RUSTDOCFLAGS missing_docs ---
+
+echo -e "${BOLD}Check 4: Doc comments on pub items${NC}"
+
+if RUSTDOCFLAGS="-D missing_docs" cargo doc --no-deps --quiet 2>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} All pub items have doc comments."
+else
+    echo -e "  ${RED}✗${NC} Missing doc comments on pub items."
+    echo "  Run: RUSTDOCFLAGS=\"-D missing_docs\" cargo doc --no-deps"
+    echo "  to see which items need documentation."
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+echo ""
+
+# --- Check 5: Test naming — behaviour-named, not implementation-named ---
+
+echo -e "${BOLD}Check 5: Test naming (behaviour over implementation)${NC}"
+
+BAD_NAME_COUNT=0
+# Pattern: fn test_<single_word>() — too vague
+# We flag: test_parse, test_new, test_create, test_process, test_handle, test_run
+# We don't flag: test_parse_rejects_empty_input (has behaviour description)
+
+VAGUE_PATTERNS="fn test_(parse|new|create|process|handle|run|execute|build|init|setup|check|validate|convert|transform|render|format|display|load|save|read|write|get|set|update|delete|remove|add|insert|find|search|filter|sort|merge|split|join|map|reduce|fold|collect|iter|next|has|is|can|should|does|will|make|do|try|attempt)\b\("
+
+while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+
+    MATCHES=$(grep -nE "$VAGUE_PATTERNS" "$file" 2>/dev/null || true)
+    if [[ -n "$MATCHES" ]]; then
+        while IFS= read -r match; do
+            [[ -z "$match" ]] && continue
+            echo -e "  ${YELLOW}⚠${NC} $file:$match"
+            BAD_NAME_COUNT=$((BAD_NAME_COUNT + 1))
+        done <<< "$MATCHES"
+    fi
+done <<< "$(find_all_src_files)"
+
+if [[ "$BAD_NAME_COUNT" -eq 0 ]]; then
+    echo -e "  ${GREEN}✓${NC} All test names appear behaviour-oriented."
+else
+    echo -e "  ${YELLOW}Found $BAD_NAME_COUNT possibly vague test name(s).${NC}"
+    echo "  Prefer: parse_citation_rejects_missing_title"
+    echo "  Over:   test_parse"
+    WARNINGS=$((WARNINGS + BAD_NAME_COUNT))
+fi
+echo ""
+
+# --- Summary ---
+
+echo -e "${BOLD}=== Summary ===${NC}"
+echo "  Violations: $VIOLATIONS"
+echo "  Warnings:   $WARNINGS"
+echo ""
+
+if [[ "$WARN_ONLY" == true ]]; then
+    echo -e "${YELLOW}(--warn-only mode: exiting 0 regardless)${NC}"
+    exit 0
+fi
+
+if [[ "$VIOLATIONS" -gt 0 ]]; then
+    echo -e "${RED}✗ FAIL:${NC} $VIOLATIONS violation(s) found. Fix before session close."
+    exit 2
+fi
+
+if [[ "$WARNINGS" -gt 0 ]]; then
+    echo -e "${YELLOW}⚠ PASS with warnings.${NC}"
+    exit 0
+fi
+
+echo -e "${GREEN}✓ All Livery lint rules pass.${NC}"
+exit 0

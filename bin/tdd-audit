@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# livery/bin/tdd-audit — Verify TDD discipline from git history
+#
+# Examines commits since SESSION_START (or the last 20 commits) for evidence
+# that test files were modified before or alongside implementation files.
+#
+# Exit codes:
+#   0 — all commits show TDD evidence (or are non-code commits)
+#   1 — one or more implementation-only commits detected (warning)
+#   2 — majority of code commits lack test evidence (failure)
+#
+# Usage:
+#   livery/bin/tdd-audit                    # check last 20 commits
+#   livery/bin/tdd-audit --since=HEAD~5     # check last 5 commits
+#   livery/bin/tdd-audit --session-start=abc123  # check since a specific commit
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+SINCE=""
+COMMIT_RANGE="HEAD~20..HEAD"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --since=*)
+            COMMIT_RANGE="${1#--since=}..HEAD"
+            shift
+            ;;
+        --session-start=*)
+            COMMIT_RANGE="${1#--session-start=}..HEAD"
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: tdd-audit [--since=REF] [--session-start=COMMIT]"
+            echo ""
+            echo "Checks git history for TDD evidence: test files modified"
+            echo "before or alongside implementation files."
+            echo ""
+            echo "Options:"
+            echo "  --since=REF           Check commits from REF to HEAD"
+            echo "  --session-start=SHA   Check commits from SHA to HEAD"
+            echo ""
+            echo "Exit codes:"
+            echo "  0  All code commits have test evidence"
+            echo "  1  Some commits lack test evidence (warning)"
+            echo "  2  Majority of code commits lack test evidence (failure)"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+echo -e "${BOLD}=== TDD Audit ===${NC}"
+echo ""
+
+# Get the list of commits to examine
+COMMITS=$(git log --format="%H" "$COMMIT_RANGE" 2>/dev/null || git log --format="%H" -20)
+
+if [[ -z "$COMMITS" ]]; then
+    echo -e "${GREEN}✓${NC} No commits to audit."
+    exit 0
+fi
+
+TOTAL_CODE_COMMITS=0
+COMMITS_WITH_TESTS=0
+COMMITS_WITHOUT_TESTS=0
+FLAGGED_COMMITS=()
+
+while IFS= read -r commit; do
+    # Get files changed in this commit
+    FILES=$(git diff-tree --no-commit-id --name-only -r "$commit" 2>/dev/null)
+
+    # Skip commits that don't touch .rs files
+    RS_FILES=$(echo "$FILES" | grep '\.rs$' || true)
+    if [[ -z "$RS_FILES" ]]; then
+        continue
+    fi
+
+    TOTAL_CODE_COMMITS=$((TOTAL_CODE_COMMITS + 1))
+
+    # Classify files as test or implementation
+    HAS_TEST_FILE=false
+    HAS_IMPL_FILE=false
+
+    while IFS= read -r file; do
+        [[ -z "$file" ]] && continue
+
+        # Test files: anything in tests/ dir, or files with test in the name,
+        # or files where the diff adds #[test] or #[cfg(test)]
+        if [[ "$file" =~ /tests/ ]] || [[ "$file" =~ _test\.rs$ ]] || [[ "$file" =~ test_ ]]; then
+            HAS_TEST_FILE=true
+        else
+            # Check if this file's diff contains test additions
+            DIFF=$(git diff-tree -p "$commit" -- "$file" 2>/dev/null || true)
+            if echo "$DIFF" | grep -qE '^\+.*#\[(test|cfg\(test\))\]'; then
+                HAS_TEST_FILE=true
+            elif echo "$DIFF" | grep -qE '^\+.*mod tests \{'; then
+                HAS_TEST_FILE=true
+            elif echo "$DIFF" | grep -qE '^\+.*mod proptests \{'; then
+                HAS_TEST_FILE=true
+            elif echo "$DIFF" | grep -qE '^\+.*(fn test_|fn .*_test\b)'; then
+                HAS_TEST_FILE=true
+            else
+                # This is a non-test .rs file with implementation changes
+                # Only count it as impl if it has actual additions (not just moves/renames)
+                ADDITIONS=$(echo "$DIFF" | grep -cE '^\+[^+]' || true)
+                if [[ "$ADDITIONS" -gt 2 ]]; then
+                    HAS_IMPL_FILE=true
+                fi
+            fi
+        fi
+    done <<< "$RS_FILES"
+
+    # A code commit with implementation changes but no test changes is suspicious
+    if [[ "$HAS_IMPL_FILE" == true && "$HAS_TEST_FILE" == false ]]; then
+        COMMITS_WITHOUT_TESTS=$((COMMITS_WITHOUT_TESTS + 1))
+        SHORT=$(git log --format="%h %s" -1 "$commit")
+        FLAGGED_COMMITS+=("$SHORT")
+    elif [[ "$HAS_IMPL_FILE" == true && "$HAS_TEST_FILE" == true ]]; then
+        COMMITS_WITH_TESTS=$((COMMITS_WITH_TESTS + 1))
+    fi
+done <<< "$COMMITS"
+
+# Report
+echo "  Code commits examined:     $TOTAL_CODE_COMMITS"
+echo "  Commits with test changes: $COMMITS_WITH_TESTS"
+echo "  Commits without tests:     $COMMITS_WITHOUT_TESTS"
+echo ""
+
+if [[ "$TOTAL_CODE_COMMITS" -eq 0 ]]; then
+    echo -e "${GREEN}✓${NC} No code commits to audit."
+    exit 0
+fi
+
+if [[ "$COMMITS_WITHOUT_TESTS" -eq 0 ]]; then
+    echo -e "${GREEN}✓${NC} All code commits include test evidence. TDD discipline confirmed."
+    exit 0
+fi
+
+# Show flagged commits
+echo -e "${YELLOW}Commits with implementation changes but no test evidence:${NC}"
+for flagged in "${FLAGGED_COMMITS[@]}"; do
+    echo -e "  ${RED}✗${NC} $flagged"
+done
+echo ""
+
+# Calculate ratio
+RATIO=$((COMMITS_WITHOUT_TESTS * 100 / TOTAL_CODE_COMMITS))
+
+if [[ "$RATIO" -gt 50 ]]; then
+    echo -e "${RED}✗ FAIL:${NC} ${RATIO}% of code commits lack test evidence."
+    echo "  TDD requires tests to be written before or alongside implementation."
+    echo "  Each commit should include both test and implementation changes."
+    exit 2
+else
+    echo -e "${YELLOW}⚠ WARN:${NC} ${RATIO}% of code commits lack test evidence."
+    echo "  Some commits may be refactor-only (acceptable) but verify manually."
+    echo "  TDD requires tests to be written before implementation."
+    exit 1
+fi

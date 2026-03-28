@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# livery/bin/refactor-check — Verify three-pass refactoring evidence
+#
+# Checks that a REFACTOR-EVIDENCE.md file exists in the project root
+# with all three mandatory passes documented. This is Level 3 enforcement:
+# the agent must actively claim it performed each pass and describe what
+# it found or changed.
+#
+# The file is ephemeral — created each session, checked at session end,
+# and can be deleted or committed as the developer prefers.
+#
+# Exit codes:
+#   0 — all three passes documented
+#   1 — file exists but missing one or more passes (warning)
+#   2 — file does not exist (failure)
+#
+# Usage:
+#   livery/bin/refactor-check
+#   livery/bin/refactor-check --path=path/to/REFACTOR-EVIDENCE.md
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+EVIDENCE_FILE="REFACTOR-EVIDENCE.md"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --path=*)
+            EVIDENCE_FILE="${1#--path=}"
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: refactor-check [--path=FILE]"
+            echo ""
+            echo "Checks that REFACTOR-EVIDENCE.md contains documentation"
+            echo "of all three mandatory refactoring passes:"
+            echo "  Pass 1: Ousterhout (structure)"
+            echo "  Pass 2: ARC names (surface)"
+            echo "  Pass 3: ARC expression (surface)"
+            echo ""
+            echo "Options:"
+            echo "  --path=FILE  Path to evidence file (default: REFACTOR-EVIDENCE.md)"
+            echo ""
+            echo "Exit codes:"
+            echo "  0  All three passes documented"
+            echo "  1  File exists but incomplete"
+            echo "  2  File does not exist"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+echo -e "${BOLD}=== Refactor Evidence Check ===${NC}"
+echo ""
+
+if [[ ! -f "$EVIDENCE_FILE" ]]; then
+    echo -e "${RED}✗ FAIL:${NC} $EVIDENCE_FILE not found."
+    echo ""
+    echo "  The three-pass refactoring protocol requires evidence."
+    echo "  Create $EVIDENCE_FILE with sections for each pass:"
+    echo ""
+    echo "    ## Pass 1 — Ousterhout (structure)"
+    echo "    [What was examined, what was changed or confirmed]"
+    echo ""
+    echo "    ## Pass 2 — ARC names (surface)"
+    echo "    [Names reviewed, any renames, naming-as-design-signal findings]"
+    echo ""
+    echo "    ## Pass 3 — ARC expression (surface)"
+    echo "    [Comments reviewed, guard clauses applied, control flow simplified]"
+    echo ""
+    echo "  If no refactoring was needed (rare), document why."
+    exit 2
+fi
+
+echo "  Found: $EVIDENCE_FILE"
+echo ""
+
+CONTENT=$(cat "$EVIDENCE_FILE")
+MISSING=()
+
+# Check for Pass 1 — Ousterhout
+if ! echo "$CONTENT" | grep -qiE '(pass 1|ousterhout|structure pass)'; then
+    MISSING+=("Pass 1 — Ousterhout (structure)")
+fi
+
+# Check for Pass 2 — ARC names
+if ! echo "$CONTENT" | grep -qiE '(pass 2|arc names?|naming pass|names pass)'; then
+    MISSING+=("Pass 2 — ARC names (surface)")
+fi
+
+# Check for Pass 3 — ARC expression
+if ! echo "$CONTENT" | grep -qiE '(pass 3|arc expression|expression pass|comment|control flow)'; then
+    MISSING+=("Pass 3 — ARC expression (surface)")
+fi
+
+# Check that each section has actual content (not just a header)
+LINES=$(wc -l < "$EVIDENCE_FILE" | tr -d ' ')
+if [[ "$LINES" -lt 6 ]]; then
+    echo -e "${YELLOW}⚠${NC} File has only $LINES lines — likely insufficient detail."
+    echo "  Each pass should describe what was examined and what changed."
+    echo ""
+fi
+
+if [[ ${#MISSING[@]} -eq 0 ]]; then
+    echo -e "${GREEN}✓${NC} All three refactoring passes documented."
+    exit 0
+fi
+
+echo -e "${YELLOW}⚠ WARN:${NC} Missing documentation for:"
+for pass in "${MISSING[@]}"; do
+    echo -e "  ${RED}✗${NC} $pass"
+done
+echo ""
+echo "  All three passes are mandatory. Document what was examined"
+echo "  and what was changed (or why no changes were needed)."
+exit 1

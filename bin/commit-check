@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# livery/bin/commit-check — Verify commit message format
+#
+# Checks that recent commits follow Livery's structured commit message
+# format: type prefix, SESSION field, WHY field, WHAT field.
+#
+# Exit codes:
+#   0 — all commits follow the format
+#   1 — some commits have format issues (warning)
+#   2 — majority of commits violate format (failure)
+#
+# Usage:
+#   livery/bin/commit-check                      # check last 10 commits
+#   livery/bin/commit-check --since=HEAD~5       # check last 5
+#   livery/bin/commit-check --session-start=abc  # check since commit
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+COMMIT_RANGE="HEAD~10..HEAD"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --since=*)
+            COMMIT_RANGE="${1#--since=}..HEAD"
+            shift
+            ;;
+        --session-start=*)
+            COMMIT_RANGE="${1#--session-start=}..HEAD"
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: commit-check [--since=REF] [--session-start=SHA]"
+            echo ""
+            echo "Verifies commit messages follow Livery format:"
+            echo "  <type>: <what changed>"
+            echo "  SESSION: N"
+            echo "  WHY: ..."
+            echo "  WHAT: ..."
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+echo -e "${BOLD}=== Commit Message Check ===${NC}"
+echo ""
+
+COMMITS=$(git log --format="%H" "$COMMIT_RANGE" 2>/dev/null || git log --format="%H" -10)
+
+if [[ -z "$COMMITS" ]]; then
+    echo -e "${GREEN}✓${NC} No commits to check."
+    exit 0
+fi
+
+TOTAL=0
+GOOD=0
+BAD=0
+FLAGGED=()
+VALID_TYPES="feat|fix|refactor|test|docs|style|chore"
+
+while IFS= read -r commit; do
+    TOTAL=$((TOTAL + 1))
+    MSG=$(git log --format="%B" -1 "$commit")
+    SHORT=$(git log --format="%h" -1 "$commit")
+    FIRST_LINE=$(echo "$MSG" | head -1)
+    ISSUES=()
+
+    # Check 1: Type prefix on first line
+    if ! echo "$FIRST_LINE" | grep -qE "^(${VALID_TYPES}): .+"; then
+        ISSUES+=("missing type prefix (feat:/fix:/refactor:/test:/docs:/style:/chore:)")
+    fi
+
+    # Check 2: Not a single-line commit (unless it's a merge or initial commit)
+    LINE_COUNT=$(echo "$MSG" | wc -l | tr -d ' ')
+    if [[ "$LINE_COUNT" -lt 3 ]] && ! echo "$FIRST_LINE" | grep -qiE '^(merge|initial|phase)'; then
+        ISSUES+=("single-line commit message (need SESSION, WHY, WHAT fields)")
+    fi
+
+    # Check 3: SESSION field present
+    if ! echo "$MSG" | grep -qE '^SESSION:'; then
+        # Allow for merge commits and Phase commits
+        if ! echo "$FIRST_LINE" | grep -qiE '^(merge|initial|phase)'; then
+            ISSUES+=("missing SESSION: field")
+        fi
+    fi
+
+    # Check 4: WHY field present
+    if ! echo "$MSG" | grep -qE '^WHY:'; then
+        if ! echo "$FIRST_LINE" | grep -qiE '^(merge|initial|phase)'; then
+            ISSUES+=("missing WHY: field")
+        fi
+    fi
+
+    # Check 5: WHAT field present
+    if ! echo "$MSG" | grep -qE '^WHAT:'; then
+        if ! echo "$FIRST_LINE" | grep -qiE '^(merge|initial|phase)'; then
+            ISSUES+=("missing WHAT: field")
+        fi
+    fi
+
+    if [[ ${#ISSUES[@]} -eq 0 ]]; then
+        GOOD=$((GOOD + 1))
+    else
+        BAD=$((BAD + 1))
+        ISSUE_STR=$(printf ", %s" "${ISSUES[@]}")
+        ISSUE_STR="${ISSUE_STR:2}"
+        FLAGGED+=("$SHORT: $ISSUE_STR")
+    fi
+done <<< "$COMMITS"
+
+echo "  Commits examined: $TOTAL"
+echo "  Well-formatted:   $GOOD"
+echo "  Issues found:     $BAD"
+echo ""
+
+if [[ "$BAD" -eq 0 ]]; then
+    echo -e "${GREEN}✓${NC} All commit messages follow Livery format."
+    exit 0
+fi
+
+echo -e "${YELLOW}Commits with format issues:${NC}"
+for flagged in "${FLAGGED[@]}"; do
+    echo -e "  ${RED}✗${NC} $flagged"
+done
+echo ""
+
+RATIO=$((BAD * 100 / TOTAL))
+
+if [[ "$RATIO" -gt 50 ]]; then
+    echo -e "${RED}✗ FAIL:${NC} ${RATIO}% of commits have format issues."
+    exit 2
+else
+    echo -e "${YELLOW}⚠ WARN:${NC} ${RATIO}% of commits have format issues."
+    exit 1
+fi
