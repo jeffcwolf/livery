@@ -139,6 +139,12 @@ so the happy path runs at the lowest indentation level. Extract complex boolean
 conditions into named explaining variables. Verify every function does one thing at
 one level of abstraction.
 
+**Document the refactoring.** After completing all three passes, write
+(or update) `REFACTOR-EVIDENCE.md` in the project root. Document what
+each pass examined and what changed. This file is checked by
+`livery/bin/refactor-check` at session end. A template is available at
+`livery/templates/REFACTOR-EVIDENCE.md`.
+
 **Never skip red.** The moment you want to "write the implementation and test it
 after" is the moment you produce tests that verify what the code does rather than
 what it should do. That is the shared-assumption trap.
@@ -473,6 +479,7 @@ contract. These are the universal gates that apply to every project:
 - [ ] No formatting violations (`cargo fmt --check`)
 - [ ] No lint warnings (`cargo clippy -- -D warnings` or equivalent)
 - [ ] Quality gate passes (`livery/bin/prism check . --strict` or project equivalent)
+- [ ] All gate scripts pass (`scripts/validate.sh` exits 0)
 - [ ] Prism baseline delta computed and recorded
 - [ ] Mutation check recorded: `**Mutation check:** [not run / run on <files> — N mutants tested, M survived (details below)]`
 - [ ] `livery/skills/review-for-red-flags.md` completed on all modules touched
@@ -481,6 +488,23 @@ contract. These are the universal gates that apply to every project:
 - [ ] `<project>/SESSIONS.md` entry written with scope, decisions, Prism delta, audit results
 - [ ] `process/SESSION-NNN.md` committed alongside SESSIONS.md entry
 - [ ] Session-end pattern check completed (see `livery/feedback/feedback-loop.md` §3.1)
+
+**Gate scripts.** The validation pipeline includes automated checks
+beyond cargo tooling. These are Level 4 (automated gate) enforcement
+of rules that were previously Level 1 (prose). The gate scripts are:
+
+| Script | What it checks | Blocking? |
+|---|---|---|
+| `livery/bin/lint-rules` | .unwrap() without SAFETY, weak assertions, #[allow(dead_code)], missing docs, vague test names | Yes (exit 2 = fail) |
+| `livery/bin/tdd-audit` | Git history shows test files modified before/with impl files | Yes if >50% violations |
+| `livery/bin/refactor-check` | REFACTOR-EVIDENCE.md exists with three passes documented | Yes if file missing |
+| `livery/bin/commit-check` | Commit messages follow structured format | Yes if >50% violations |
+
+The project CLAUDE.md contains a HARD RULES section that inlines the
+most critical rules from this constitution. These rules are duplicated
+deliberately — they survive context decay because the project CLAUDE.md
+is auto-loaded at session start, while CLAUDE-base.md is only loaded
+if the agent follows the pre-flight instructions.
 
 ---
 
