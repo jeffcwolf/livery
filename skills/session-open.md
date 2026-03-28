@@ -37,9 +37,14 @@ session's first task is to fix the pre-existing failure, recorded as such in
 If `cargo check` fails with compile errors, read the errors before anything else.
 They may indicate that the last session ended in an incomplete state.
 
-### Step 2 — Capture the Prism baseline
+### Step 2 — Clean up prior session artifacts
 
-After the baseline is confirmed clean, capture the Prism metrics snapshot:
+If `REFACTOR-EVIDENCE.md` exists from a previous session, delete it.
+It will be recreated during this session's refactoring.
+
+### Step 3 — Capture the Prism baseline
+
+After the baseline is confirmed clean and prior artifacts cleaned up, capture the Prism metrics snapshot:
 
 ```bash
 livery/bin/prism stats . --json > /tmp/prism-session-before.json
@@ -51,7 +56,7 @@ report them to the human unless asked. If `livery/bin/prism` is not executable, 
 (see `livery/skills/run-validation.md`) will need the human to provide Prism data
 manually.
 
-### Step 3 — Read the session context
+### Step 4 — Read the session context
 
 In order:
 
@@ -68,7 +73,7 @@ In order:
 3. **Read the relevant section of `<project>/ARCHITECTURE.md`** for the crate(s) being worked on.
    Confirm your understanding of the public API contract and the dependency boundaries.
 
-### Step 4 — Confirm scope boundaries explicitly
+### Step 5 — Confirm scope boundaries explicitly
 
 State the scope of this session in one sentence. Then state what is explicitly out of
 scope. If you cannot do this, the session prompt is ambiguous — seek clarification.
@@ -80,7 +85,7 @@ Example:
 > **Out of scope:** The CodeMeta and BibTeX transformation functions (next session).
 > Any changes to `mint-config` or `mint-cli`.
 
-### Step 5 — Load the relevant reference documents
+### Step 6 — Load the relevant reference documents
 
 Based on the session scope, identify which files to have ready:
 
@@ -103,7 +108,7 @@ and the single-responsibility principle. ARC and Ousterhout converge here: if yo
 cannot name it, it probably needs to be split. Resolve the design question before
 choosing a name.
 
-### Step 6 — Constitution check
+### Step 7 — Constitution check
 
 Before writing any code, state back the three rules from the loaded standards files
 that are most relevant to this session's scope. For example, if the session involves
@@ -117,7 +122,7 @@ properly. Go back and re-read `CLAUDE-base.md` and the relevant standards files.
 This step produces no artifact — it is a self-check. Record the three rules in the
 session process log as a `CONSTITUTION_CHECK` entry.
 
-### Step 7 — Create the process log
+### Step 8 — Create the process log
 
 Create the session process log file before any other action:
 
@@ -126,9 +131,9 @@ process/SESSION-NNN.md
 ```
 
 See CLAUDE-base.md §Session Process Log for the format. The first entries will be
-`READ` entries for each file loaded in Steps 3 and 5.
+`READ` entries for each file loaded in Steps 4 and 6.
 
-### Step 8 — Record the session opening in `<project>/SESSIONS.md`
+### Step 9 — Record the session opening in `<project>/SESSIONS.md`
 
 Add the session header before writing any code:
 

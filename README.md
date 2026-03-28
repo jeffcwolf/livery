@@ -78,10 +78,14 @@ docs/                 Rationale documents (human-facing).
   INDEX.md            System map and navigation guide.
   (6 rationale files)
 
-bin/                  Pre-compiled tooling.
+bin/                  Pre-compiled tooling and gate scripts.
   prism               Automated quality gate binary.
+  scaffold            Project scaffold generator.
+  tdd-audit           Verify TDD discipline from git history.
+  lint-rules          Livery-specific anti-pattern checks.
+  refactor-check      Verify three-pass refactoring evidence.
+  commit-check        Verify structured commit messages.
   README.md           Build and rebuild instructions.
-  scaffold            shell script, runs anywhere
 
 ---
 

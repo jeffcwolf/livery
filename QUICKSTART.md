@@ -193,6 +193,8 @@ API stub. Reference a skill if applicable:
 - Follow `livery/CLAUDE-base.md` and `CLAUDE.md` in full.
 - Do not implement anything outside this session's scope.
 - Do not modify public APIs without updating ARCHITECTURE.md.
+- Create REFACTOR-EVIDENCE.md during refactoring (three passes).
+- Run `scripts/validate.sh` at session end — all 9 gates must pass.
 ```
 
 ### First session tips
