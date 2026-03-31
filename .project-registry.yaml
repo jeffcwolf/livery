@@ -1,8 +1,8 @@
-name: livery
+name: Livery
 description: "A structured methodology for producing high-quality code with agentic coding tools, delivered as a set of standards documents and discipline conventions embedded in project repos."
 status: stable
 category: other
-language: markdown
+language:
 forge: github
 visibility: public
 tags: [methodology, agentic-coding, claude-code, software-quality, tdd]
@@ -62,7 +62,7 @@ website:
     ## Reference Implementation
 
     `mint` — a Rust CLI for publishing research software as citable
-    scholarly artifacts — is being built using Livery from the ground up
+    scholarly artifacts — has been built using Livery from the ground up
     and serves as the primary reference implementation.
 
     ## Status
