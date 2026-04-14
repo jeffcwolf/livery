@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# livery/bin/setup-stubs
+#
+# Ensures compilable crates exist at every path that Cargo.toml
+# expects for sibling dependencies. If the real repo is checked
+# out at the expected path, this script does nothing. If it isn't
+# (e.g. Claude Code cloud), it symlinks the stub from livery/stubs/.
+#
+# Idempotent. Safe to run locally (real crates found → skipped)
+# and in CC cloud (stubs symlinked into place).
+#
+# Usage:
+#   bash livery/bin/setup-stubs          # from any repo root
+
+set -euo pipefail
+
+REPO_ROOT="$(pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+STUBS_DIR="$SCRIPT_DIR/../stubs"
+
+if [ ! -d "$STUBS_DIR" ]; then
+  echo "[setup-stubs] ERROR: stubs directory not found at $STUBS_DIR"
+  echo "[setup-stubs] Did you run 'git submodule update --init --recursive'?"
+  exit 1
+fi
+
+# ── All suite apps are siblings, so paths are the same everywhere ──
+
+declare -A STUBS
+STUBS=(
+  ["playfair-design"]="../playfair-design"
+  ["vitrine"]="../vitrine/crates/vitrine"
+)
+
+for stub_name in "${!STUBS[@]}"; do
+  target_path="${STUBS[$stub_name]}"
+  full_target="$REPO_ROOT/$target_path"
+  stub_source="$STUBS_DIR/$stub_name"
+
+  if [ -f "$full_target/Cargo.toml" ] && [ ! -L "$full_target" ]; then
+    echo "[setup-stubs] $stub_name: real crate found — skipping"
+  elif [ -L "$full_target" ]; then
+    echo "[setup-stubs] $stub_name: symlink already exists — skipping"
+  else
+    echo "[setup-stubs] $stub_name: not found — linking stub"
+    mkdir -p "$(dirname "$full_target")"
+    ln -sfn "$(cd "$stub_source" && pwd)" "$full_target"
+  fi
+done
+
+echo "[setup-stubs] Done."
