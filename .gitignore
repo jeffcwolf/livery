@@ -16,4 +16,5 @@
 *.bak
 .DS_Store
 
-
+# Rust build artifacts
+target/
