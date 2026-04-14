@@ -4,6 +4,7 @@
 //! On developer machines, `.cargo/config.toml` overrides this with
 //! the real crate via `paths = [...]`.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -229,6 +230,113 @@ pub struct MetadataEntry {
 }
 
 // ---------------------------------------------------------------------------
+// ColumnType
+// ---------------------------------------------------------------------------
+
+/// How a table column's values should be interpreted for sorting,
+/// filtering, and display.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ColumnType {
+    /// Free-form text. Uses text filter and lexicographic sort.
+    Text,
+    /// Numeric values. Uses number filter and numeric sort.
+    Number,
+    /// Date strings. Uses date filter.
+    Date,
+    /// Boolean values.
+    Boolean,
+    /// Categorical tags. Uses text filter.
+    Tag,
+}
+
+// ---------------------------------------------------------------------------
+// TableColumn
+// ---------------------------------------------------------------------------
+
+/// Definition of a single column in a data table.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TableColumn {
+    /// Unique identifier for this column.
+    pub id: String,
+    /// Human-readable header text.
+    pub label: String,
+    /// Data type for sorting, filtering, and display.
+    pub column_type: ColumnType,
+    /// Initial column width in pixels.
+    pub width: Option<u32>,
+    /// Whether the column can be sorted.
+    pub sortable: bool,
+    /// Whether the column shows a filter input.
+    pub filterable: bool,
+    /// Whether cells in this column can be edited inline.
+    pub editable: bool,
+    /// Whether the column is visible.
+    pub visible: bool,
+}
+
+impl Default for TableColumn {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            label: String::new(),
+            column_type: ColumnType::Text,
+            width: None,
+            sortable: true,
+            filterable: true,
+            editable: false,
+            visible: true,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TableRow
+// ---------------------------------------------------------------------------
+
+/// A single row of table data.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TableRow {
+    /// Unique identifier for this row.
+    pub id: String,
+    /// Cell values keyed by column id.
+    pub cells: HashMap<String, String>,
+}
+
+// ---------------------------------------------------------------------------
+// TableConfig
+// ---------------------------------------------------------------------------
+
+/// Configuration for table display behavior.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TableConfig {
+    /// Row height in pixels.
+    pub row_height: Option<u32>,
+    /// Whether to show a row-number column.
+    pub show_row_numbers: bool,
+    /// Whether multiple rows can be selected simultaneously.
+    pub enable_multi_select: bool,
+    /// Whether inline cell editing is enabled globally.
+    pub enable_inline_edit: bool,
+    /// Number of leading columns to pin on the left.
+    pub frozen_columns: Option<u32>,
+}
+
+// ---------------------------------------------------------------------------
+// TableColumnState
+// ---------------------------------------------------------------------------
+
+/// Current state of a table column reported by the viewer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TableColumnState {
+    /// The column identifier.
+    pub column_id: String,
+    /// Whether the column is currently visible.
+    pub visible: bool,
+    /// Current column width in pixels.
+    pub width: u32,
+}
+
+// ---------------------------------------------------------------------------
 // ViewerCommand
 // ---------------------------------------------------------------------------
 
@@ -354,10 +462,41 @@ pub enum ViewerCommand {
         /// Result message.
         message: String,
     },
-    /// Apply a visual theme.
+    /// Apply CSS custom properties to the viewer's document root.
     SetTheme {
-        /// Theme name or configuration string.
-        theme: String,
+        /// CSS custom property key-value pairs to apply.
+        tokens: HashMap<String, String>,
+    },
+    /// Load a data table into the viewer.
+    LoadTable {
+        /// Column definitions.
+        columns: Vec<TableColumn>,
+        /// Row data to display.
+        rows: Vec<TableRow>,
+        /// Table display configuration.
+        config: TableConfig,
+    },
+    /// Replace all row data in the current table.
+    UpdateTableData {
+        /// New row data.
+        rows: Vec<TableRow>,
+    },
+    /// Programmatically select rows by their IDs.
+    SetTableSelection {
+        /// IDs of the rows to select.
+        row_ids: Vec<String>,
+    },
+    /// Show or hide a table column by its ID.
+    SetColumnVisibility {
+        /// The column id to show or hide.
+        column_id: String,
+        /// Whether the column should be visible.
+        visible: bool,
+    },
+    /// Set the quick filter text for the current table.
+    SetQuickFilter {
+        /// The search text to filter by.
+        text: String,
     },
     /// Close the viewer window.
     Close,
@@ -501,6 +640,58 @@ pub enum ViewerEvent {
     ExtractFeaturesRequested,
     /// Clear all regions clicked.
     AllRegionsCleared,
+    /// Table rendered and ready for interaction.
+    TableReady {
+        /// Number of rows loaded.
+        row_count: u32,
+        /// Number of columns.
+        column_count: u32,
+    },
+    /// Single row clicked in the table.
+    TableRowClicked {
+        /// The id of the clicked row.
+        row_id: String,
+    },
+    /// Row double-clicked in the table.
+    TableRowDoubleClicked {
+        /// The id of the double-clicked row.
+        row_id: String,
+    },
+    /// Cell value edited inline in the table.
+    TableCellEdited {
+        /// The row id.
+        row_id: String,
+        /// The column id.
+        column_id: String,
+        /// Value before the edit.
+        old_value: String,
+        /// Value after the edit.
+        new_value: String,
+    },
+    /// Selected rows changed in the table.
+    TableSelectionChanged {
+        /// IDs of all currently selected rows.
+        row_ids: Vec<String>,
+    },
+    /// Column sort order changed in the table.
+    TableSortChanged {
+        /// The column id.
+        column_id: String,
+        /// Whether ascending.
+        ascending: bool,
+    },
+    /// Column filter value changed in the table.
+    TableFilterChanged {
+        /// The column id.
+        column_id: String,
+        /// The filter value.
+        value: String,
+    },
+    /// Column layout changed in the table.
+    TableColumnsChanged {
+        /// Current state of all columns.
+        columns: Vec<TableColumnState>,
+    },
     /// Non-recoverable error.
     Error {
         /// Error description.
@@ -574,6 +765,26 @@ impl ViewerManager {
         &mut self,
         _id: ViewerId,
         _hidden: bool,
+    ) -> Result<(), VitrineError> {
+        Ok(())
+    }
+
+    /// Reposition a viewer window on screen (stub — no-op).
+    pub fn set_window_position(
+        &mut self,
+        _id: ViewerId,
+        _x: i32,
+        _y: i32,
+    ) -> Result<(), VitrineError> {
+        Ok(())
+    }
+
+    /// Resize a viewer window's content area (stub — no-op).
+    pub fn set_window_size(
+        &mut self,
+        _id: ViewerId,
+        _width: u32,
+        _height: u32,
     ) -> Result<(), VitrineError> {
         Ok(())
     }

@@ -2,8 +2,13 @@
 name = "playfair-design"
 version = "0.1.0"
 edition = "2021"
-description = "Vendored snapshot of Playfair design system for stub builds"
+authors = ["Jeffrey C. Wolf"]
+license = "MIT"
 
 [dependencies]
-iced = { version = "0.14", features = ["canvas"] }
-serde = { version = "1", features = ["derive"] }
+iced = { version = "0.14", features = ["wgpu", "tokio", "advanced", "markdown", "image"] }
+iced_aw = { version = "0.13", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+
+[features]
+iced_aw = ["dep:iced_aw"]
